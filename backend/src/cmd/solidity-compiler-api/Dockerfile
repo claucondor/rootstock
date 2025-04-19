@@ -10,4 +10,4 @@ WORKDIR /app
 COPY --from=build /app/dist ./dist
 COPY ../../package.json ./
 RUN npm install --omit=dev --ignore-scripts
-CMD ["node", "dist/cmd/solidity-compiler-api/index.js"] 
+CMD ["node", "dist/src/cmd/solidity-compiler-api/index.js"] 

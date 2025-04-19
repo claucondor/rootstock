@@ -1,5 +1,5 @@
 GIT_SHA := $(shell git rev-parse --short=7 HEAD)
-PROJECT_ID=spanish-catalyst
+PROJECT_ID=automatic-ace-457219-r3
 REGION=us-central1
 
 # Convierte el .env a la sintaxis KEY1=VAL1,KEY2=VAL2,... (ignora comentarios y líneas vacías)
@@ -38,12 +38,13 @@ dev: validate-app-name build
 
 docker: validate-app-name build
 	@echo "[docker $(APP_NAME)] building and running docker in dev mode..."
-	@docker build -t $(APP_NAME):$(GIT_SHA) -f src/cmd/$(APP_NAME)/Dockerfile .
-	@docker run --env-file src/cmd/$(APP_NAME)/.env -p 8080:8080 $(APP_NAME):$(GIT_SHA)
+	@docker build -t gcr.io/$(PROJECT_ID)/$(APP_NAME):$(GIT_SHA) -f src/cmd/$(APP_NAME)/Dockerfile .
+	@docker run --env-file src/cmd/$(APP_NAME)/.env -p 8080:8080 gcr.io/$(PROJECT_ID)/$(APP_NAME):$(GIT_SHA)
 
 deploy: validate-app-name build
 	@echo "[deploy $(APP_NAME)] deploying to Cloud Run..."
-	@docker buildx build --platform linux/amd64,linux/arm64 --build-arg APP_NAME=$(APP_NAME) -t gcr.io/$(PROJECT_ID)/$(APP_NAME):$(GIT_SHA) -f src/cmd/$(APP_NAME)/Dockerfile . --push
+	@docker build -t gcr.io/$(PROJECT_ID)/$(APP_NAME):$(GIT_SHA) -f src/cmd/$(APP_NAME)/Dockerfile .
+	@docker push gcr.io/$(PROJECT_ID)/$(APP_NAME):$(GIT_SHA)
 	@gcloud run deploy $(APP_NAME) \
 		--image gcr.io/$(PROJECT_ID)/$(APP_NAME):$(GIT_SHA) \
 		--region $(REGION) \

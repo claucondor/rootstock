@@ -1,9 +1,14 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import compileRoutes from '../../internal/http/compile/routes';
 import healthzRoutes from '../../internal/http/healthz/routes';
 
 export async function startServer() {
   const fastify = Fastify({ logger: true });
+
+  await fastify.register(cors, {
+    origin: true, // Permite cualquier origen
+  });
 
   fastify.register(healthzRoutes, { prefix: '/healthz' });
   fastify.register(compileRoutes, { prefix: '/compile' });
