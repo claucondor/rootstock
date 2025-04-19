@@ -333,23 +333,75 @@ function generateFlattenedCode(discoveredFiles: Map<string, FileNode>): string {
   const visited = new Set<string>();
   const temp = new Set<string>();
   
-  function visit(fileName: string) {
+  // Registro de dependencias para análisis
+  const dependencyGraph = new Map<string, string[]>();
+  const dependedOnBy = new Map<string, Set<string>>();
+  
+  // Detectar todas las dependencias por interfaz
+  for (const [fileName, node] of discoveredFiles.entries()) {
+    dependencyGraph.set(fileName, [...node.dependencies]);
+    
+    // Registrar cada archivo que depende de un determinado archivo
+    for (const dep of node.dependencies) {
+      if (!dependedOnBy.has(dep)) {
+        dependedOnBy.set(dep, new Set());
+      }
+      dependedOnBy.get(dep)?.add(fileName);
+    }
+  }
+  
+  // Determinar qué archivos son cruciales: aquellos que otras dependencias necesitan
+  const crucialFiles = new Set<string>();
+  for (const [fileName, dependents] of dependedOnBy.entries()) {
+    if (dependents.size > 0) {
+      crucialFiles.add(fileName);
+      console.log(`[FLATTEN] Archivo crucial detectado: ${fileName}, usado por: ${Array.from(dependents).join(', ')}`);
+    }
+  }
+  
+  // Añadir también el contrato principal y sus dependencias directas
+  crucialFiles.add('Contract.sol');
+  const mainNode = discoveredFiles.get('Contract.sol');
+  if (mainNode) {
+    for (const dep of mainNode.dependencies) {
+      crucialFiles.add(dep);
+      console.log(`[FLATTEN] Archivo crucial (dependencia directa del contrato principal): ${dep}`);
+    }
+  }
+  
+  function visit(fileName: string, path: string[] = []) {
+    // Si ya está en el resultado final, no procesar de nuevo
+    if (visited.has(fileName)) return;
+    
+    // Ciclo detectado
     if (temp.has(fileName)) {
-      // Detección de ciclo, ignoramos para evitar bucles infinitos
-      console.log(`[FLATTEN] Ciclo detectado en dependencias: ${fileName}`);
+      // Si es un archivo crucial, lo incluimos a pesar del ciclo
+      if (crucialFiles.has(fileName)) {
+        console.log(`[FLATTEN] ⚠️ Ciclo detectado en dependencia crucial: ${fileName}, se incluirá de todas formas`);
+        // No retornamos, permitimos que continúe para archivos cruciales
+      } else {
+        // Incluso si no es "crucial", lo incluimos si alguien lo necesita
+        console.log(`[FLATTEN] ⚠️ Ciclo detectado en dependencia: ${fileName} en el camino [${path.join(' -> ')}]`);
+        if (dependedOnBy.has(fileName) && dependedOnBy.get(fileName)!.size > 0) {
+          console.log(`[FLATTEN] Este archivo es necesario para otros, se incluirá a pesar del ciclo`);
+        } else {
+          return; // Solo descartamos si realmente nadie lo necesita
+        }
+      }
+    }
+    
+    const node = discoveredFiles.get(fileName);
+    if (!node) {
+      console.log(`[FLATTEN] ❌ Nodo no encontrado: ${fileName}`);
       return;
     }
     
-    if (visited.has(fileName)) return;
-    
-    const node = discoveredFiles.get(fileName);
-    if (!node) return;
-    
     temp.add(fileName);
+    path.push(fileName);
     
     // Primero visitar todas las dependencias
     for (const dep of node.dependencies) {
-      visit(dep);
+      visit(dep, [...path]);  // Clonar el path para cada rama
     }
     
     temp.delete(fileName);
@@ -357,8 +409,20 @@ function generateFlattenedCode(discoveredFiles: Map<string, FileNode>): string {
     sortedFiles.push(node);
   }
   
-  // Visitar todos los archivos para ordenarlos
+  // Primero incluir los archivos cruciales
+  for (const fileName of crucialFiles) {
+    const node = discoveredFiles.get(fileName);
+    if (node) {
+      console.log(`[FLATTEN] Asegurando que el archivo crucial ${fileName} esté incluido`);
+      visit(fileName);
+    }
+  }
+  
+  // Luego procesar el resto
   for (const fileName of discoveredFiles.keys()) {
+    if (!visited.has(fileName)) {
+      console.log(`[FLATTEN] Procesando archivo adicional no crucial: ${fileName}`);
+    }
     visit(fileName);
   }
   
@@ -391,45 +455,46 @@ function generateFlattenedCode(discoveredFiles: Map<string, FileNode>): string {
   
   flattenedCode += '\n';
   
-  // Procesamos cada archivo después de eliminar imports y licencias SPDX
+  // Recolectar y procesar declaraciones para evitar duplicados
+  const contractDeclarations: Record<string, string> = {};
+  
   for (const file of sortedFiles) {
+    console.log(`[FLATTEN] Procesando archivo ${file.fileName}`);
+    
     // Eliminar todos los imports y licencias SPDX
     let processedContent = file.content
-      .replace(/import\s+(\{[^\}]+\}\s+from\s+)?['"]([^'"]+)['"];?/g, '')
+      .replace(/import\s+(\{[^\}]+\}\s+from\s+)?['"]([^'"]+)['"](;)?/g, '')
       .replace(/\/\/\s*SPDX-License-Identifier:.*$/mg, ''); // Eliminar todas las licencias SPDX
     
-    // Comprobar duplicados
-    let match;
+    // Extraer todas las declaraciones de contratos y verificar duplicados
+    let contractMatch;
+    const contractMatches: {name: string, text: string}[] = [];
     
-    // Buscar todas las declaraciones de contrato/interface
-    while ((match = contractRegex.exec(processedContent)) !== null) {
-      const contractName = match[2];
-      if (seenContracts.has(contractName)) {
-        logStep('generateFlattenedCode: contrato duplicado, se omitirá', contractName);
-        processedContent = '';
-        break;
+    // Extraer todas las definiciones de contratos
+    const tempContractRegex = /\b(abstract\s+contract|contract|interface)\s+([A-Za-z][A-Za-z0-9_]*)\s+[^{]*?\{[\s\S]*?(?=\n})/g;
+    while ((contractMatch = tempContractRegex.exec(processedContent)) !== null) {
+      const contractName = contractMatch[2];
+      
+      // Si no es un token aleatorio y no está en la lista de palabras clave
+      if (contractName && contractName.length > 1 && !/^(is|to|and|the|of|or)$/.test(contractName)) {
+        contractMatches.push({
+          name: contractName,
+          text: contractMatch[0] + '\n}'
+        });
       }
-      seenContracts.add(contractName);
     }
     
-    // Buscar todas las declaraciones de error
-    while ((match = errorRegex.exec(processedContent)) !== null) {
-      const errorName = match[1];
-      if (seenErrors.has(errorName)) {
-        logStep('generateFlattenedCode: error duplicado', errorName);
-        // No descartamos todo el archivo, solo lo tendremos en cuenta
+    // Verificar duplicados
+    for (const {name, text} of contractMatches) {
+      if (seenContracts.has(name)) {
+        console.log(`[FLATTEN] Contrato duplicado ${name} en ${file.fileName}, se omitirá`);
+        // Remover solo esta declaración
+        processedContent = processedContent.replace(text, '');
+      } else {
+        seenContracts.add(name);
+        // Guardar la declaración
+        contractDeclarations[name] = text;
       }
-      seenErrors.add(errorName);
-    }
-    
-    // Buscar todas las declaraciones de library
-    while ((match = libraryRegex.exec(processedContent)) !== null) {
-      const libraryName = match[1];
-      if (seenLibraries.has(libraryName)) {
-        logStep('generateFlattenedCode: librería duplicada', libraryName);
-        // No descartamos todo el archivo, solo lo tendremos en cuenta
-      }
-      seenLibraries.add(libraryName);
     }
     
     if (processedContent.trim()) {
@@ -442,6 +507,48 @@ function generateFlattenedCode(discoveredFiles: Map<string, FileNode>): string {
   
   // Eliminar líneas vacías múltiples
   flattenedCode = flattenedCode.replace(/\n\s*\n\s*\n/g, '\n\n');
+  
+  // Verificar referencias a contratos faltantes
+  // Analizamos el código para encontrar referencias a interfaces/contratos que no hayamos incluido
+  const missingContracts = new Set<string>();
+  
+  // Buscar referencias a interfaces como "contract X is Y, Z" donde Y o Z no están definidos
+  const inheritanceRegex = /\b(abstract\s+contract|contract|interface)\s+([A-Za-z][A-Za-z0-9_]*)\s+is\s+([^{]+)\{/g;
+  let inheritanceMatch;
+  while ((inheritanceMatch = inheritanceRegex.exec(flattenedCode)) !== null) {
+    const inherits = inheritanceMatch[3].split(',').map(s => s.trim());
+    for (const parent of inherits) {
+      // Ignorar cosas como palabras clave solidity, herencia modificada, etc.
+      if (parent && !parent.includes(' ') && !seenContracts.has(parent) && 
+          !/^(public|private|internal|external|pure|view|payable|nonpayable|override)$/.test(parent)) {
+        missingContracts.add(parent);
+        console.log(`[FLATTEN] ⚠️ Detectada referencia a contrato faltante: ${parent}`);
+      }
+    }
+  }
+  
+  // Si encontramos contratos faltantes, intentamos agregarlos
+  if (missingContracts.size > 0) {
+    console.log(`[FLATTEN] Contratos faltantes detectados: ${Array.from(missingContracts).join(', ')}`);
+    
+    // Caso específico: IERC20Errors
+    if (missingContracts.has('IERC20Errors')) {
+      console.log('[FLATTEN] ⚠️ IERC20Errors faltante, añadiendo interface de reemplazo');
+      
+      // Agregar una definición simple de IERC20Errors al principio
+      const ierc20ErrorsInterface = `
+interface IERC20Errors {
+    error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
+    error ERC20InvalidSender(address sender);
+    error ERC20InvalidReceiver(address receiver);
+    error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
+    error ERC20InvalidApprover(address approver);
+    error ERC20InvalidSpender(address spender);
+}
+`;
+      flattenedCode = flattenedCode.replace(/\n\n/, `\n\n${ierc20ErrorsInterface}\n\n`);
+    }
+  }
   
   logStep('generateFlattenedCode: código flatten generado');
   return flattenedCode;
