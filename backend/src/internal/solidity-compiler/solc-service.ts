@@ -26,53 +26,8 @@ export class SolidityCompilerService {
       },
     };
 
-    // Import resolver para OpenZeppelin y cualquier URL remota
-    async function findImport(path: string) {
-      // Soporte para OpenZeppelin vía GitHub
-      if (path.startsWith('@openzeppelin/')) {
-        const url = `https://raw.githubusercontent.com/OpenZeppelin/openzeppelin-contracts/v4.9.3/${path.replace('@openzeppelin/', '')}`;
-        try {
-          const res = await axios.get(url);
-          return { contents: res.data };
-        } catch (e) {
-          return { error: 'No se pudo resolver el import: ' + path };
-        }
-      }
-      // Soporte para cualquier import remoto http(s)
-      if (path.startsWith('http://') || path.startsWith('https://')) {
-        try {
-          const res = await axios.get(path);
-          return { contents: res.data };
-        } catch (e) {
-          return { error: 'No se pudo resolver el import remoto: ' + path };
-        }
-      }
-      // Otros imports no soportados
-      return { error: 'Import no soportado: ' + path };
-    }
-
-    // Usar la versión async de solc.compile para soportar el import resolver async
-    const output = JSON.parse(await new Promise<string>((resolve, reject) => {
-      solc.compile(
-        JSON.stringify(input),
-        {
-          import: (path: string) => {
-            // solc.compile espera un import resolver sync, así que usamos una promesa y resolvemos async
-            // pero solc-js >=0.8.0 soporta import async
-            // Si tu versión de solc-js no soporta esto, hay que actualizarla
-            throw new Error('El compilador debe soportar import async');
-          },
-        },
-        async (path: string) => {
-          const result = await findImport(path);
-          return result;
-        },
-        (err: any, compiled: string) => {
-          if (err) reject(err);
-          else resolve(compiled);
-        }
-      );
-    }));
+    // Compilar directamente el código flatten, sin resolver imports
+    const output = JSON.parse(solc.compile(JSON.stringify(input)));
 
     const warnings: string[] = [];
     const errors: string[] = [];
