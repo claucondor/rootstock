@@ -17,23 +17,17 @@ function Chat({ messages, onSend, onRefine, isLoading }) {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const newMessage = {
-      type: 'user',
-      content: input,
-      timestamp: new Date().toISOString()
-    };
-
-    setMessages(prev => [...prev, newMessage]);
+    const userMessage = input;
     setInput('');
 
     if (isRefining) {
       // Find the last contract message to refine
       const lastContract = [...messages].reverse().find(m => m.type === 'contract');
       if (lastContract) {
-        onRefine(lastContract.content.source, input);
+        onRefine(lastContract.content.source, userMessage);
       }
     } else {
-      onSend(input);
+      onSend(userMessage);
     }
   };
 

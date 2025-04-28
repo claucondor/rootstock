@@ -67,6 +67,13 @@ function App() {
 
   // Generate contract from prompt
   const generateContract = async (prompt) => {
+    // Add user message to chat
+    setMessages(prev => [...prev, {
+      type: 'user',
+      content: prompt,
+      timestamp: new Date().toISOString()
+    }]);
+    
     setIsLoading(true);
     try {
       const response = await fetch(`${API_URL}/generate`, {
@@ -79,10 +86,10 @@ function App() {
 
       const data = await response.json();
       setContract(data);
-      setMessages(prev => [...prev, { 
-        type: 'contract', 
+      setMessages(prev => [...prev, {
+        type: 'contract',
         content: data,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       }]);
     } catch (error) {
       console.error('Generation error:', error);
@@ -98,6 +105,13 @@ function App() {
 
   // Refine existing contract
   const refineContract = async (source, prompt) => {
+    // Add user message to chat
+    setMessages(prev => [...prev, {
+      type: 'user',
+      content: prompt,
+      timestamp: new Date().toISOString()
+    }]);
+    
     setIsLoading(true);
     try {
       const response = await fetch(`${API_URL}/refine`, {
@@ -110,10 +124,10 @@ function App() {
 
       const data = await response.json();
       setContract(data);
-      setMessages(prev => [...prev, { 
-        type: 'contract', 
+      setMessages(prev => [...prev, {
+        type: 'contract',
         content: data,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       }]);
     } catch (error) {
       console.error('Refinement error:', error);

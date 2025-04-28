@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'prism-react-renderer';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 
 function ContractViewer({ contract, network }) {
@@ -83,7 +84,7 @@ function ContractViewer({ contract, network }) {
             </CopyToClipboard>
             <SyntaxHighlighter
               language="solidity"
-              style={null}
+              style={vscDarkPlus}
               customStyle={{
                 backgroundColor: 'transparent',
                 padding: 0,
@@ -107,7 +108,7 @@ function ContractViewer({ contract, network }) {
             </CopyToClipboard>
             <SyntaxHighlighter
               language="json"
-              style={null}
+              style={vscDarkPlus}
               customStyle={{
                 backgroundColor: 'transparent',
                 padding: 0,
