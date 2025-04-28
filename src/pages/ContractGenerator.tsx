@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ChatInterface from '@/components/ChatInterface';
 import { ArrowLeft, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Footer from '@/components/Footer';
 
 const ContractGenerator = () => {
   const [activeTab, setActiveTab] = useState('generator');
@@ -66,6 +67,8 @@ const ContractGenerator = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      <Footer />
     </div>
   );
 };

@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { ConnectWallet } from '@/components/ConnectWallet';
 
-const Header = () => {
+interface HeaderProps {
+  isWalletConnected?: boolean;
+  onWalletConnected?: () => void;
+}
+
+const Header = ({ isWalletConnected = false, onWalletConnected }: HeaderProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -33,9 +39,13 @@ const Header = () => {
 
         <div className="flex items-center space-x-4">
           <a href="/docs" className="hidden md:block text-gray-300 hover:text-white transition-colors">Docs</a>
-          <a href="/api" className="px-5 py-2 bg-rootstock-primary text-white rounded-lg hover:bg-rootstock-primary/80 transition-colors">
-            API
-          </a>
+          {isWalletConnected ? (
+            <Link to="/contract-generator" className="px-5 py-2 bg-rootstock-primary text-white rounded-lg hover:bg-rootstock-primary/80 transition-colors">
+              Ir al Generador
+            </Link>
+          ) : (
+            <ConnectWallet onConnected={onWalletConnected} />
+          )}
         </div>
       </div>
     </header>
