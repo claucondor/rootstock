@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls, 
@@ -9,7 +8,13 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-const ContractVisualizer = ({ contractData = {} }) => {
+interface ContractVisualizerProps {
+  contractData?: {
+    sourceCode?: string;
+  };
+}
+
+const ContractVisualizer = ({ contractData = {} }: ContractVisualizerProps) => {
   const initialNodes: Node[] = [
     {
       id: '1',
@@ -97,8 +102,19 @@ const ContractVisualizer = ({ contractData = {} }) => {
     { id: 'e-events-approval', source: 'events', target: 'approvalEvent' }
   ];
 
-  const [nodes] = useState(initialNodes);
-  const [edges] = useState(initialEdges);
+  const [nodes, setNodes] = useState(initialNodes);
+  const [edges, setEdges] = useState(initialEdges);
+
+  // En una implementación real, podrías utilizar el sourceCode para generar dinámicamente
+  // los nodos basados en la estructura del contrato (variables, funciones, eventos, etc.)
+  // mediante análisis de código o similares.
+  useEffect(() => {
+    if (contractData.sourceCode) {
+      // Aquí iría la lógica para analizar el código y generar nodos actualizados
+      // Por ahora, simplemente mantenemos la visualización predeterminada
+      console.log('Código del contrato recibido:', contractData.sourceCode.substring(0, 100) + '...');
+    }
+  }, [contractData.sourceCode]);
 
   return (
     <div className="p-6">
