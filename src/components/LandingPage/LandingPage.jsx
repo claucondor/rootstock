@@ -381,7 +381,7 @@ function LandingPage({ onGetStarted = () => { console.log('Get Started clicked')
           </div>
         </div>
         
-        <div className="container text-center relative z-10">
+        <div className="container text-center relative z-20">
           <h2 className="text-3xl md:text-4xl font-bold mb-6 animate-pulse-slow">Ready to Build on Rootstock?</h2>
           <p className="text-xl mb-10 max-w-2xl mx-auto">
             Start creating smart contracts with AI assistance and deploy them to the Rootstock blockchain
