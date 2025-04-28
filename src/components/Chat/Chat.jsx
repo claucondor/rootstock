@@ -47,7 +47,7 @@ function Chat({ messages, onSend, onRefine, isLoading }) {
   };
 
   return (
-    <div className="card overflow-hidden">
+    <div className="card h-full flex flex-col overflow-hidden">
       <div className="card-header">
         <h2 className="text-lg font-semibold">Smart Contract Generator</h2>
         <div className="flex items-center space-x-2">
@@ -67,7 +67,7 @@ function Chat({ messages, onSend, onRefine, isLoading }) {
         </div>
       </div>
 
-      <div className="h-96 overflow-y-auto p-4 space-y-4">
+      <div className="flex-grow overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-6">
             <i className="fa-solid fa-code-branch text-muted text-5xl mb-4"></i>
@@ -130,7 +130,7 @@ function Chat({ messages, onSend, onRefine, isLoading }) {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="card-footer">
+      <form onSubmit={handleSubmit} className="card-footer mt-auto">
         <div className="flex space-x-2">
           <input
             type="text"
@@ -142,7 +142,7 @@ function Chat({ messages, onSend, onRefine, isLoading }) {
           />
           <button
             type="submit"
-            className="btn btn-primary"
+            className="btn btn-primary whitespace-nowrap"
             disabled={isLoading || !input.trim()}
           >
             {isLoading ? (

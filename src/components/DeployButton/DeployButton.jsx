@@ -60,8 +60,11 @@ function DeployButton({ contract, account, network }) {
 
   return (
     <div className="card overflow-hidden">
-      <div className="card-header">
+      <div className="card-header flex justify-between items-center">
         <h2 className="text-lg font-semibold">Deploy Contract</h2>
+        <div className="text-xs text-muted">
+          Network: <span className="font-medium">{network.name}</span>
+        </div>
       </div>
       
       <div className="card-body">
@@ -100,9 +103,13 @@ function DeployButton({ contract, account, network }) {
           </div>
         )}
 
-        {txHash && (
-          <div className="mt-4">
-            <p className="text-sm font-medium">Transaction Hash:</p>
+        {txHash && !success && (
+          <div className="mt-4 p-3 bg-primary bg-opacity-10 rounded-lg">
+            <div className="flex items-center mb-2">
+              <i className="fa-solid fa-circle-notch fa-spin mr-2 text-primary"></i>
+              <span className="font-medium">Transaction in progress...</span>
+            </div>
+            <p className="text-sm font-medium mt-2">Transaction Hash:</p>
             <div className="flex items-center mt-1">
               <a
                 href={getExplorerUrl(txHash)}
@@ -125,10 +132,10 @@ function DeployButton({ contract, account, network }) {
 
         {success && deployedAddress && (
           <div className="mt-4 p-4 bg-success bg-opacity-10 text-success rounded-lg animate-fade-in">
-          <div className="flex items-center mb-2">
-            <i className="fa-solid fa-circle-check mr-2"></i>
-            <strong>Contract deployed successfully!</strong>
-          </div>
+            <div className="flex items-center mb-2">
+              <i className="fa-solid fa-circle-check mr-2"></i>
+              <strong>Contract deployed successfully!</strong>
+            </div>
             
             <p className="text-sm font-medium mt-2">Contract Address:</p>
             <div className="flex items-center mt-1">
@@ -149,9 +156,12 @@ function DeployButton({ contract, account, network }) {
               </button>
             </div>
             
-            <p className="text-sm mt-3">
-              Use this address in the Contract Interaction section to interact with your deployed contract.
-            </p>
+            <div className="mt-3 flex items-center">
+              <i className="fa-solid fa-lightbulb text-warning mr-2"></i>
+              <p className="text-sm">
+                Click on the <strong>Interaction</strong> tab in the editor to interact with your deployed contract.
+              </p>
+            </div>
           </div>
         )}
       </div>

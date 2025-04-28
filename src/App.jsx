@@ -162,7 +162,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <header className="header">
         <div className="container flex justify-between items-center">
           <div className="flex items-center">
@@ -178,9 +178,24 @@ function App() {
         </div>
       </header>
 
-      <main className="container py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+      <main className="container py-4 flex-grow flex flex-col">
+        {/* Layout Tabs */}
+        <div className="tabs mb-4">
+          <button className="tab tab-active">
+            <i className="fa-solid fa-columns mr-1"></i> Split View
+          </button>
+          <button className="tab">
+            <i className="fa-solid fa-comment-alt mr-1"></i> Chat Only
+          </button>
+          <button className="tab">
+            <i className="fa-solid fa-code mr-1"></i> Editor Only
+          </button>
+        </div>
+        
+        {/* Main Content Area with Resizable Panels */}
+        <div className="flex flex-col lg:flex-row gap-4 flex-grow">
+          {/* Left Panel - Chat */}
+          <div className="lg:w-1/2 flex flex-col">
             <Chat
               messages={messages}
               onSend={generateContract}
@@ -189,31 +204,36 @@ function App() {
             />
           </div>
 
-          <div className="space-y-6">
-            <ContractViewer
-              contract={contract}
-              network={network}
-              onSourceChange={updateSourceCode}
-            />
+          {/* Right Panel - Contract Editor & Tools */}
+          <div className="lg:w-1/2 flex flex-col">
+            <div className="flex-grow">
+              <ContractViewer
+                contract={contract}
+                network={network}
+                onSourceChange={updateSourceCode}
+              />
+            </div>
             
             {contract && account && (
-              <DeployButton
-                contract={{
-                  ...contract,
-                  source: editedSource
-                }}
-                account={account}
-                network={network}
-              />
+              <div className="mt-4">
+                <DeployButton
+                  contract={{
+                    ...contract,
+                    source: editedSource
+                  }}
+                  account={account}
+                  network={network}
+                />
+              </div>
             )}
           </div>
         </div>
       </main>
       
-      <footer className="py-4 border-t border-gray-200">
+      <footer className="py-3 border-t border-gray-200">
         <div className="container">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="text-sm text-muted mb-4 md:mb-0">
+            <div className="text-sm text-muted mb-2 md:mb-0">
               &copy; {new Date().getFullYear()} RSK Smart Contract Generator
             </div>
             <div className="flex space-x-4">

@@ -128,12 +128,8 @@ function ContractInteraction({ contract, sourceCode, network }) {
   };
 
   return (
-    <div className="card overflow-hidden">
-      <div className="card-header">
-        <h2 className="text-lg font-semibold">Contract Interaction</h2>
-      </div>
-      
-      <div className="card-body">
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="mb-4">
         <div className="mb-4">
           <label className="block text-sm font-medium mb-1">Contract Address</label>
           <div className="flex space-x-2">
@@ -172,13 +168,16 @@ function ContractInteraction({ contract, sourceCode, network }) {
           )}
         </div>
 
-        <div className="space-y-4">
-          <h3 className="font-semibold">Functions</h3>
+        <div className="flex-grow overflow-auto">
+          <h3 className="font-semibold mb-3">Contract Functions</h3>
           
           {functions.length === 0 ? (
-            <p className="text-muted">No functions found in contract ABI</p>
+            <div className="p-4 bg-gray-50 rounded-lg text-center">
+              <i className="fa-solid fa-code text-muted text-2xl mb-2"></i>
+              <p className="text-muted">No functions found in contract ABI</p>
+            </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {functions.map((func) => (
                 <div key={func.id} className="function-card">
                   <div className="function-header">
