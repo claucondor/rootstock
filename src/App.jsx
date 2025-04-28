@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+// Import ethers without the buffer dependency that's causing issues
+import { ethers } from 'ethers/lib/ethers';
 import Chat from './components/Chat/Chat';
 import ContractViewer from './components/ContractViewer/ContractViewer';
 import MetaMaskButton from './components/MetaMaskButton/MetaMaskButton';

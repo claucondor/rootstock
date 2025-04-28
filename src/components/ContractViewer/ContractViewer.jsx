@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 
 function ContractViewer({ contract, network }) {
@@ -24,9 +22,16 @@ function ContractViewer({ contract, network }) {
 
   const formatABI = (abi) => {
     try {
+      // If abi is already an object (array), stringify it directly
+      if (typeof abi === 'object') {
+        return JSON.stringify(abi, null, 2);
+      }
+      // If abi is a string, parse it first then stringify with formatting
       return JSON.stringify(JSON.parse(abi), null, 2);
-    } catch {
-      return abi;
+    } catch (error) {
+      console.error("Error formatting ABI:", error);
+      // If there's an error, return a string representation or empty string
+      return typeof abi === 'string' ? abi : '';
     }
   };
 
@@ -82,20 +87,9 @@ function ContractViewer({ contract, network }) {
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             </CopyToClipboard>
-            <SyntaxHighlighter
-              language="solidity"
-              style={vscDarkPlus}
-              customStyle={{
-                backgroundColor: 'transparent',
-                padding: 0,
-                margin: 0,
-                fontSize: '0.875rem',
-                lineHeight: '1.5',
-              }}
-              showLineNumbers
-            >
+            <pre className="bg-gray-50 dark:bg-gray-700 p-3 rounded overflow-auto text-sm font-mono">
               {contract.source}
-            </SyntaxHighlighter>
+            </pre>
           </div>
         )}
 
@@ -106,20 +100,9 @@ function ContractViewer({ contract, network }) {
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             </CopyToClipboard>
-            <SyntaxHighlighter
-              language="json"
-              style={vscDarkPlus}
-              customStyle={{
-                backgroundColor: 'transparent',
-                padding: 0,
-                margin: 0,
-                fontSize: '0.875rem',
-                lineHeight: '1.5',
-              }}
-              showLineNumbers
-            >
+            <pre className="bg-gray-50 dark:bg-gray-700 p-3 rounded overflow-auto text-sm font-mono">
               {formatABI(contract.abi)}
-            </SyntaxHighlighter>
+            </pre>
           </div>
         )}
 
