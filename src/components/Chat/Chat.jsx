@@ -4,6 +4,21 @@ function Chat({ messages, onSend, onRefine, isLoading }) {
   const [input, setInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);
   const messagesEndRef = useRef(null);
+  const [placeholder, setPlaceholder] = useState('');
+  const placeholders = [
+    "Create an ERC20 token with a fixed supply...",
+    "I need a voting contract for my DAO...",
+    "Create a simple NFT collection with 10,000 items...",
+    "I need a staking contract for my token...",
+    "Create a multisig wallet contract..."
+  ];
+
+  useEffect(() => {
+    const randomPlaceholder = placeholders[Math.floor(Math.random() * placeholders.length)];
+    setPlaceholder(isRefining
+      ? "Enter your refinements for the contract..."
+      : randomPlaceholder);
+  }, [isRefining]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,78 +47,115 @@ function Chat({ messages, onSend, onRefine, isLoading }) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold">Chat with Contract Generator</h2>
+    <div className="card overflow-hidden">
+      <div className="card-header">
+        <h2 className="text-lg font-semibold">Smart Contract Generator</h2>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs text-muted">
+            {isRefining ? 'Refine Mode' : 'Generate Mode'}
+          </span>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={isRefining}
+              onChange={() => setIsRefining(!isRefining)}
+              className="sr-only"
+              disabled={isLoading || messages.filter(m => m.type === 'contract').length === 0}
+            />
+            <span className="slider"></span>
+          </label>
+        </div>
       </div>
 
       <div className="h-96 overflow-y-auto p-4 space-y-4">
-        {messages.map((message, index) => (
-          <div 
-            key={index}
-            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-4 py-2 ${
-              message.type === 'user' 
-                ? 'bg-blue-500 text-white' 
-                : message.type === 'contract'
-                  ? 'bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100'
-                  : 'bg-red-100 dark:bg-red-900 text-red-900 dark:text-red-100'
-            }`}>
-              {message.type === 'contract' ? (
-                <div>
-                  <p className="font-medium">Contract generated successfully!</p>
-                  <p className="text-xs opacity-75">Click on the contract tab to view details</p>
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center p-6">
+            <i className="fa-solid fa-code-branch text-muted text-5xl mb-4"></i>
+            <h3 className="text-lg font-medium mb-2">Welcome to RSK Contract Generator</h3>
+            <p className="text-muted mb-4">
+              Describe the smart contract you want to create, and our AI will generate it for you.
+            </p>
+            <div className="grid grid-cols-1 gap-2 w-full max-w-md">
+              {placeholders.map((suggestion, index) => (
+                <button
+                  key={index}
+                  className="text-left text-sm p-2 border border-primary border-opacity-20 rounded-md hover:bg-primary hover:bg-opacity-5"
+                  onClick={() => setInput(suggestion.replace('...', ''))}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`message ${
+                  message.type === 'user'
+                    ? 'message-user'
+                    : message.type === 'contract'
+                      ? 'message-contract'
+                      : 'message-error'
+                }`}>
+                  {message.type === 'contract' ? (
+                    <div>
+                      <p className="font-medium">Contract generated successfully!</p>
+                      <p className="text-xs opacity-75">You can now edit and deploy your contract</p>
+                    </div>
+                  ) : (
+                    <p>{message.content}</p>
+                  )}
+                  <p className="message-timestamp">
+                    {new Date(message.timestamp).toLocaleTimeString()}
+                  </p>
                 </div>
-              ) : (
-                <p>{message.content}</p>
-              )}
-              <p className="text-xs opacity-75 mt-1">
-                {new Date(message.timestamp).toLocaleTimeString()}
-              </p>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg px-4 py-2">
-              <p>Generating contract...</p>
-            </div>
-          </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="message animate-pulse">
+                  <div className="flex items-center">
+                    <i className="fa-solid fa-spinner fa-spin mr-2"></i>
+                    <p>Generating smart contract...</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700">
+      <form onSubmit={handleSubmit} className="card-footer">
         <div className="flex space-x-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isRefining ? "How would you like to refine the contract?" : "Describe the contract you want to create..."}
-            className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={placeholder}
+            className="form-input"
             disabled={isLoading}
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="btn btn-primary"
             disabled={isLoading || !input.trim()}
           >
-            {isRefining ? 'Refine' : 'Send'}
-          </button>
-        </div>
-        <div className="mt-2 flex justify-end">
-          <button
-            type="button"
-            onClick={() => setIsRefining(!isRefining)}
-            className={`text-xs px-2 py-1 rounded ${
-              isRefining 
-                ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
-            }`}
-            disabled={isLoading || messages.filter(m => m.type === 'contract').length === 0}
-          >
-            {isRefining ? 'Switch to Generate Mode' : 'Switch to Refine Mode'}
+            {isLoading ? (
+              <i className="fa-solid fa-spinner fa-spin"></i>
+            ) : isRefining ? (
+              <>
+                <i className="fa-solid fa-wand-magic-sparkles mr-1"></i> Refine
+              </>
+            ) : (
+              <>
+                <i className="fa-solid fa-bolt mr-1"></i> Generate
+              </>
+            )}
           </button>
         </div>
       </form>

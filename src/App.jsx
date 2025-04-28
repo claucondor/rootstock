@@ -33,6 +33,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState([]);
   const [network, setNetwork] = useState(NETWORKS[0]);
+  const [editedSource, setEditedSource] = useState('');
 
   // Connect to MetaMask
   const connectWallet = async () => {
@@ -87,6 +88,7 @@ function App() {
 
       const data = await response.json();
       setContract(data);
+      setEditedSource(data.source);
       setMessages(prev => [...prev, {
         type: 'contract',
         content: data,
@@ -94,10 +96,10 @@ function App() {
       }]);
     } catch (error) {
       console.error('Generation error:', error);
-      setMessages(prev => [...prev, { 
-        type: 'error', 
+      setMessages(prev => [...prev, {
+        type: 'error',
         content: error.message,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       }]);
     } finally {
       setIsLoading(false);
@@ -106,6 +108,9 @@ function App() {
 
   // Refine existing contract
   const refineContract = async (source, prompt) => {
+    // Use the edited source if available
+    const sourceToRefine = editedSource || source;
+    
     // Add user message to chat
     setMessages(prev => [...prev, {
       type: 'user',
@@ -118,13 +123,14 @@ function App() {
       const response = await fetch(`${API_URL}/refine`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source, prompt }),
+        body: JSON.stringify({ source: sourceToRefine, prompt }),
       });
 
       if (!response.ok) throw new Error('Error refining contract');
 
       const data = await response.json();
       setContract(data);
+      setEditedSource(data.source);
       setMessages(prev => [...prev, {
         type: 'contract',
         content: data,
@@ -132,53 +138,98 @@ function App() {
       }]);
     } catch (error) {
       console.error('Refinement error:', error);
-      setMessages(prev => [...prev, { 
-        type: 'error', 
+      setMessages(prev => [...prev, {
+        type: 'error',
         content: error.message,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       }]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Update the edited source code
+  const updateSourceCode = (newSource) => {
+    setEditedSource(newSource);
+    
+    // Update the contract object with the new source
+    if (contract) {
+      setContract({
+        ...contract,
+        source: newSource
+      });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">RSK Contract Generator</h1>
-          <MetaMaskButton 
-            account={account} 
-            onConnect={connectWallet} 
+    <div className="min-h-screen">
+      <header className="header">
+        <div className="container flex justify-between items-center">
+          <div className="flex items-center">
+            <i className="fa-solid fa-code text-primary text-2xl mr-2"></i>
+            <h1 className="text-2xl font-bold">
+              <span className="text-primary">RSK</span> Contract Generator
+            </h1>
+          </div>
+          <MetaMaskButton
+            account={account}
+            onConnect={connectWallet}
           />
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <Chat 
-            messages={messages}
-            onSend={generateContract}
-            onRefine={(source, prompt) => refineContract(source, prompt)}
-            isLoading={isLoading}
-          />
-        </div>
-
-        <div className="space-y-6">
-          <ContractViewer 
-            contract={contract}
-            network={network}
-          />
-          
-          {contract && account && (
-            <DeployButton 
-              contract={contract}
-              account={account}
-              network={network}
+      <main className="container py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <Chat
+              messages={messages}
+              onSend={generateContract}
+              onRefine={(source, prompt) => refineContract(source, prompt)}
+              isLoading={isLoading}
             />
-          )}
+          </div>
+
+          <div className="space-y-6">
+            <ContractViewer
+              contract={contract}
+              network={network}
+              onSourceChange={updateSourceCode}
+            />
+            
+            {contract && account && (
+              <DeployButton
+                contract={{
+                  ...contract,
+                  source: editedSource
+                }}
+                account={account}
+                network={network}
+              />
+            )}
+          </div>
         </div>
       </main>
+      
+      <footer className="py-4 border-t border-gray-200">
+        <div className="container">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="text-sm text-muted mb-4 md:mb-0">
+              &copy; {new Date().getFullYear()} RSK Smart Contract Generator
+            </div>
+            <div className="flex space-x-4">
+              <a href="https://www.rsk.co/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                <i className="fa-solid fa-globe mr-1"></i> RSK Website
+              </a>
+              <a href="https://developers.rsk.co/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                <i className="fa-solid fa-code mr-1"></i> Developer Portal
+              </a>
+              <a href="https://docs.rsk.co/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                <i className="fa-solid fa-book mr-1"></i> Documentation
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

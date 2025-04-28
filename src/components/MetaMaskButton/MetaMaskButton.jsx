@@ -5,14 +5,69 @@ function MetaMaskButton({ account, onConnect }) {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [networkName, setNetworkName] = useState('');
+  const [chainId, setChainId] = useState(null);
 
   useEffect(() => {
     if (account) {
       setIsConnected(true);
+      checkNetwork();
     } else {
       setIsConnected(false);
     }
+
+    // Listen for network changes
+    if (window.ethereum) {
+      window.ethereum.on('chainChanged', () => {
+        checkNetwork();
+      });
+    }
+
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('chainChanged', checkNetwork);
+      }
+    };
   }, [account]);
+
+  const checkNetwork = async () => {
+    if (window.ethereum) {
+      try {
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        setChainId(parseInt(chainId, 16));
+        
+        // Get network name
+        let name = 'Unknown Network';
+        
+        // Common networks
+        const networks = {
+          1: 'Ethereum Mainnet',
+          3: 'Ropsten Testnet',
+          4: 'Rinkeby Testnet',
+          5: 'Goerli Testnet',
+          42: 'Kovan Testnet',
+          56: 'BSC Mainnet',
+          97: 'BSC Testnet',
+          137: 'Polygon Mainnet',
+          80001: 'Polygon Mumbai',
+          30: 'RSK Mainnet',
+          31: 'RSK Testnet',
+          42161: 'Arbitrum One',
+          421613: 'Arbitrum Goerli',
+          10: 'Optimism',
+          420: 'Optimism Goerli',
+        };
+        
+        if (networks[parseInt(chainId, 16)]) {
+          name = networks[parseInt(chainId, 16)];
+        }
+        
+        setNetworkName(name);
+      } catch (err) {
+        console.error("Error checking network:", err);
+      }
+    }
+  };
 
   const handleConnect = async () => {
     setLoading(true);
@@ -25,6 +80,7 @@ function MetaMaskButton({ account, onConnect }) {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       onConnect(accounts[0]);
       setIsConnected(true);
+      checkNetwork();
     } catch (err) {
       setError(err.message);
       setIsConnected(false);
@@ -36,57 +92,47 @@ function MetaMaskButton({ account, onConnect }) {
   return (
     <div className="flex items-center">
       {error && (
-        <div className="text-red-500 text-sm mr-2">
+        <div className="text-danger text-sm mr-2 animate-fade-in">
           {error}
         </div>
       )}
-      <button
-        onClick={handleConnect}
-        disabled={loading || isConnected}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-          isConnected
-            ? 'bg-green-500 text-white cursor-default'
-            : loading
-              ? 'bg-gray-500 text-white cursor-not-allowed'
-              : 'bg-blue-500 hover:bg-blue-600 text-white'
-        }`}
-      >
-        {loading ? (
-          <span>Connecting...</span>
-        ) : isConnected ? (
-          <span className="flex items-center">
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                fillRule="evenodd"
-                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-            {account.substring(0, 6)}...{account.substring(account.length - 4)}
-          </span>
-        ) : (
-          <span className="flex items-center">
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.org/2000/svg"
-            >
-              <path
-                fillRule="evenodd"
-                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Connect MetaMask
-          </span>
+      
+      <div className="relative">
+        <button
+          onClick={handleConnect}
+          disabled={loading}
+          className={`btn ${
+            isConnected
+              ? 'btn-success'
+              : loading
+                ? 'btn-gray'
+                : 'btn-primary'
+          }`}
+        >
+          {loading ? (
+            <span className="flex items-center">
+              <i className="fa-solid fa-spinner fa-spin mr-2"></i>
+              Connecting...
+            </span>
+          ) : isConnected ? (
+            <span className="flex items-center">
+              <i className="fa-solid fa-wallet mr-2"></i>
+              {account ? `${account.substring(0, 6)}...${account.substring(account.length - 4)}` : 'Connected'}
+            </span>
+          ) : (
+            <span className="flex items-center">
+              <i className="fa-brands fa-ethereum mr-2"></i>
+              Connect MetaMask
+            </span>
+          )}
+        </button>
+        
+        {isConnected && networkName && (
+          <div className="absolute top-full right-0 mt-1 text-xs font-medium px-2 py-1 rounded bg-primary bg-opacity-10 text-primary">
+            {networkName}
+          </div>
         )}
-      </button>
+      </div>
     </div>
   );
 }
