@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -27,6 +26,9 @@ const Header = () => {
           <a href="#demo" className="text-gray-300 hover:text-white transition-colors">Demo</a>
           <a href="#roadmap" className="text-gray-300 hover:text-white transition-colors">Roadmap</a>
           <a href="#about" className="text-gray-300 hover:text-white transition-colors">Nosotros</a>
+          <Link to="/contract-generator" className="text-rootstock-primary hover:text-rootstock-primary/80 transition-colors">
+            Generador de Contratos
+          </Link>
         </nav>
 
         <div className="flex items-center space-x-4">

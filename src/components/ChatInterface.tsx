@@ -99,7 +99,7 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] bg-gray-900">
+    <div className="flex flex-col lg:flex-row bg-gray-900 rounded-lg overflow-hidden">
       {/* Chat Section */}
       <div className="w-full lg:w-1/2 p-6 border-r border-gray-800">
         <div className="flex items-center justify-between mb-6">

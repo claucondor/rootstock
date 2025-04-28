@@ -1,12 +1,12 @@
-
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import Hero from '@/components/Hero';
 import Terminal from '@/components/Terminal';
 import Roadmap from '@/components/Roadmap';
-import ChatInterface from '@/components/ChatInterface';
 import { ConnectWallet } from '@/components/ConnectWallet';
 import Header from '@/components/Header';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
@@ -35,7 +35,18 @@ const Index = () => {
           </div>
           
           {isWalletConnected ? (
-            <ChatInterface />
+            <div className="bg-gray-800 rounded-lg p-8 text-center max-w-3xl mx-auto">
+              <div className="text-5xl mb-4">🚀</div>
+              <h3 className="text-2xl font-bold text-white mb-2">¡Wallet Conectada!</h3>
+              <p className="text-gray-300 mb-6">
+                Ahora puedes acceder al generador de contratos inteligentes y comenzar a crear tus propios contratos para Rootstock.
+              </p>
+              <Link to="/contract-generator">
+                <Button className="bg-rootstock-primary hover:bg-rootstock-primary/80 text-white px-6 py-3">
+                  Ir al Generador de Contratos
+                </Button>
+              </Link>
+            </div>
           ) : (
             <div className="bg-gray-800/50 rounded-lg p-8 backdrop-blur-sm text-center max-w-3xl mx-auto">
               <div className="text-5xl mb-4">🔒</div>
