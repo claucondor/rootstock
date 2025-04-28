@@ -18,4 +18,8 @@ yarn-error.log*
 
 # Editor
 .vscode/
-.idea/ 
+.idea/
+
+artifacts/
+cache/
+contracts/

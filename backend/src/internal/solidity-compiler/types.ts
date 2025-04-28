@@ -1,5 +1,18 @@
-// Tipos para el compilador Solidity
+/**
+ * Interface for compilation errors and warnings
+ */
+export interface CompilationError {
+  severity: string;
+  message: string;
+  formattedMessage?: string;
+}
 
-export interface CompileInput {
-  source: string;
-} 
+/**
+ * Interface for compilation output
+ */
+export interface CompilationOutput {
+  errors?: CompilationError[];
+  warnings?: CompilationError[];
+  abi?: any;
+  bytecode?: string;
+}

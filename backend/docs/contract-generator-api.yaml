@@ -1,0 +1,393 @@
+openapi: 3.0.0
+info:
+  title: Generador de Contratos Inteligentes API
+  description: |
+    API para generar y refinar contratos inteligentes utilizando OpenZeppelin y Uniswap V3 en Rootstock.
+    Esta API permite a los usuarios generar contratos inteligentes a partir de descripciones en lenguaje natural
+    y refinar contratos existentes con instrucciones específicas.
+
+    ## Frameworks Soportados
+
+    ### OpenZeppelin 4.9.3
+    - **Componentes disponibles**:
+      - Access Control: Ownable, AccessControl
+      - Tokens: ERC20, ERC721, ERC777, ERC1155
+      - Seguridad: ReentrancyGuard, Pausable
+      - Utilidades: SafeMath (para Solidity <0.8.0)
+      - Governance: Governor, TimelockController
+      - Proxy/Upgrades: Transparent, UUPS
+    - **Versión Solidity**: 0.8.0 a 0.8.9
+
+    ### Uniswap V3 en Rootstock
+    - **Versiones**:
+      - Uniswap V3 Core: 1.0.0
+      - Uniswap V3 Periphery: 1.0.0
+      - Solidity: 0.8.29
+    - **Direcciones en Rootstock**:
+      - v3 Core Factory: 0xaF37EC98A00FD63689CF3060BF3B6784E00caD82
+      - Universal Router: 0x244f68e77357f86a8522323eBF80b5FC2F814d3E
+      - Proxy Admin: 0xE6c223e32eD33f29b4D7C002C01DebDA629e4604
+      - Nonfungible Position Manager: 0x9d9386c042F194B460Ec424A1e57ACDE25f5C4b1
+      - Quoter V2: 0xb51727c996C68E30F598A923A5006853Cd2fEB31
+      - SwapRouter02: 0x0B14ff67f0014046b4b99057Aec4509640b3947A
+    - **Componentes principales**: IUniswapV3Pool, ISwapRouter, INonfungiblePositionManager, IQuoter
+
+    ## Funcionamiento del Generador
+    El generador utiliza modelos de lenguaje natural para crear contratos inteligentes a partir de descripciones.
+    El proceso incluye:
+    1. Análisis de la solicitud para determinar qué frameworks utilizar
+    2. Generación del código Solidity
+    3. Compilación y verificación del contrato
+    4. Corrección automática de errores (hasta 3 intentos)
+    5. Devolución del contrato compilado con su ABI y bytecode
+  version: 1.0.0
+  contact:
+    name: Soporte Técnico
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8080
+    description: Servidor de desarrollo local
+
+tags:
+  - name: Contratos
+    description: Operaciones relacionadas con la generación y refinamiento de contratos inteligentes
+
+paths:
+  /generate:
+    post:
+      tags:
+        - Contratos
+      summary: Generar un nuevo contrato inteligente
+      description: |
+        Genera un contrato inteligente basado en una descripción en lenguaje natural.
+        El sistema puede generar contratos utilizando OpenZeppelin, Uniswap V3, o una combinación de ambos,
+        dependiendo de lo que se solicite específicamente en el prompt.
+
+        ### Consejos para mejores resultados:
+        - Sea específico sobre el tipo de contrato que desea (ERC20, ERC721, etc.)
+        - Mencione claramente las funcionalidades requeridas
+        - Especifique nombres, símbolos y decimales para tokens
+        - Para contratos de Uniswap, indique qué operaciones necesita (swap, liquidez, etc.)
+        - Para contratos combinados, describa claramente cómo deben interactuar ambos frameworks
+      operationId: generateContract
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRequest'
+            examples:
+              openZeppelinOnly:
+                summary: Contrato solo con OpenZeppelin
+                value:
+                  prompt: "Crea un token ERC20 simple llamado \"MiToken\" con símbolo \"MTK\" y 18 decimales. Debe tener una función de mint que solo pueda ser llamada por el owner."
+              openZeppelinAdvanced:
+                summary: Contrato OpenZeppelin avanzado
+                value:
+                  prompt: "Crea un token ERC20 llamado \"GovernanceToken\" con símbolo \"GOV\" que permita votar en propuestas de gobernanza. Debe incluir funciones para delegar votos, crear snapshots de balances y bloquear tokens durante periodos de votación."
+              uniswapOnly:
+                summary: Contrato solo con Uniswap
+                value:
+                  prompt: "Crea un contrato que permita hacer swaps en Uniswap V3 en Rootstock. Debe tener una función para hacer swap de tokens exactos por la máxima cantidad posible de otro token."
+              uniswapLiquidity:
+                summary: Contrato Uniswap para proveer liquidez
+                value:
+                  prompt: "Crea un contrato que permita a los usuarios proveer liquidez en pools de Uniswap V3 en Rootstock. Debe incluir funciones para añadir liquidez en rangos de precio específicos y retirar posiciones."
+              combined:
+                summary: Contrato combinado
+                value:
+                  prompt: "Crea un token ERC20 llamado \"SwapToken\" con símbolo \"SWT\" y 18 decimales que también tenga una función para hacer swaps directamente con Uniswap V3 en Rootstock. El token debe permitir a los usuarios intercambiar sus tokens por otros tokens usando Uniswap."
+              combinedAdvanced:
+                summary: Contrato combinado avanzado
+                value:
+                  prompt: "Crea un contrato de staking que permita a los usuarios depositar tokens ERC20 y recibir recompensas. El contrato debe usar Uniswap V3 para intercambiar automáticamente parte de las recompensas a stablecoins. Incluye funciones para depositar, retirar y reclamar recompensas."
+      responses:
+        '200':
+          description: Contrato generado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateSuccessResponse'
+        '400':
+          description: Error en la solicitud o en la compilación del contrato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /refine:
+    post:
+      tags:
+        - Contratos
+      summary: Refinar un contrato inteligente existente
+      description: |
+        Refina un contrato inteligente existente basado en instrucciones específicas.
+        El sistema puede modificar contratos que utilizan OpenZeppelin, Uniswap V3, o una combinación de ambos,
+        dependiendo de lo que se solicite específicamente en el prompt.
+
+        ### Consejos para mejores resultados:
+        - Proporcione el código fuente completo del contrato
+        - Sea específico sobre los cambios requeridos
+        - Mencione si desea mantener ciertas funcionalidades intactas
+        - Para modificaciones complejas, divida las instrucciones en pasos claros
+        - Indique si hay restricciones de compatibilidad a considerar
+      operationId: refineContract
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefineRequest'
+            examples:
+              addFunction:
+                summary: Agregar una función a un contrato existente
+                value:
+                  source: "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\nimport \"@openzeppelin/contracts/token/ERC20/ERC20.sol\";\nimport \"@openzeppelin/contracts/access/Ownable.sol\";\n\ncontract MiToken is ERC20, Ownable {\n    constructor() ERC20(\"MiToken\", \"MTK\") {}\n\n    function mint(address to, uint256 amount) public onlyOwner {\n        _mint(to, amount);\n    }\n}"
+                  prompt: "Agrega una función burn que permita a los usuarios quemar sus propios tokens."
+              addUniswapFunctionality:
+                summary: Añadir funcionalidad de Uniswap a un contrato existente
+                value:
+                  source: "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\nimport \"@openzeppelin/contracts/token/ERC20/ERC20.sol\";\nimport \"@openzeppelin/contracts/access/Ownable.sol\";\n\ncontract MiToken is ERC20, Ownable {\n    constructor() ERC20(\"MiToken\", \"MTK\") {}\n\n    function mint(address to, uint256 amount) public onlyOwner {\n        _mint(to, amount);\n    }\n}"
+                  prompt: "Añade funcionalidad para que el contrato pueda hacer swaps en Uniswap V3 en Rootstock. Debe permitir a los usuarios intercambiar sus tokens por otros tokens."
+              fixSecurityIssue:
+                summary: Corregir un problema de seguridad
+                value:
+                  source: "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\nimport \"@openzeppelin/contracts/token/ERC20/IERC20.sol\";\nimport \"@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol\";\n\ncontract TokenSwapper {\n    ISwapRouter public immutable swapRouter;\n    \n    constructor(address _swapRouter) {\n        swapRouter = ISwapRouter(_swapRouter);\n    }\n    \n    function swapExactInputSingle(address tokenIn, address tokenOut, uint256 amountIn) external returns (uint256 amountOut) {\n        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);\n        IERC20(tokenIn).approve(address(swapRouter), amountIn);\n        \n        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({\n            tokenIn: tokenIn,\n            tokenOut: tokenOut,\n            fee: 3000,\n            recipient: msg.sender,\n            deadline: block.timestamp,\n            amountIn: amountIn,\n            amountOutMinimum: 0,\n            sqrtPriceLimitX96: 0\n        });\n        \n        amountOut = swapRouter.exactInputSingle(params);\n    }\n}"
+                  prompt: "Corrige los problemas de seguridad en este contrato: 1) Usa SafeERC20 para las transferencias, 2) Añade un parámetro amountOutMinimum para evitar front-running, 3) Añade un deadline configurable, 4) Verifica que los tokens no sean address(0)."
+              optimizeGas:
+                summary: Optimizar el consumo de gas
+                value:
+                  source: "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\nimport \"@openzeppelin/contracts/token/ERC20/ERC20.sol\";\nimport \"@openzeppelin/contracts/access/Ownable.sol\";\n\ncontract StakingRewards is Ownable {\n    ERC20 public stakingToken;\n    ERC20 public rewardsToken;\n    \n    uint256 public rewardRate = 100;\n    uint256 public lastUpdateTime;\n    uint256 public rewardPerTokenStored;\n    \n    mapping(address => uint256) public userRewardPerTokenPaid;\n    mapping(address => uint256) public rewards;\n    mapping(address => uint256) public balances;\n    \n    uint256 public totalSupply;\n    \n    constructor(address _stakingToken, address _rewardsToken) {\n        stakingToken = ERC20(_stakingToken);\n        rewardsToken = ERC20(_rewardsToken);\n    }\n    \n    function rewardPerToken() public view returns (uint256) {\n        if (totalSupply == 0) {\n            return rewardPerTokenStored;\n        }\n        return rewardPerTokenStored + ((block.timestamp - lastUpdateTime) * rewardRate * 1e18 / totalSupply);\n    }\n    \n    function earned(address account) public view returns (uint256) {\n        return balances[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / 1e18 + rewards[account];\n    }\n    \n    function stake(uint256 amount) external {\n        updateReward(msg.sender);\n        totalSupply += amount;\n        balances[msg.sender] += amount;\n        stakingToken.transferFrom(msg.sender, address(this), amount);\n    }\n    \n    function withdraw(uint256 amount) external {\n        updateReward(msg.sender);\n        totalSupply -= amount;\n        balances[msg.sender] -= amount;\n        stakingToken.transfer(msg.sender, amount);\n    }\n    \n    function getReward() external {\n        updateReward(msg.sender);\n        uint256 reward = rewards[msg.sender];\n        rewards[msg.sender] = 0;\n        rewardsToken.transfer(msg.sender, reward);\n    }\n    \n    function updateReward(address account) internal {\n        rewardPerTokenStored = rewardPerToken();\n        lastUpdateTime = block.timestamp;\n        rewards[account] = earned(account);\n        userRewardPerTokenPaid[account] = rewardPerTokenStored;\n    }\n}"
+                  prompt: "Optimiza este contrato para reducir el consumo de gas: 1) Usa SafeERC20, 2) Implementa un patrón de checkpoint para reducir cálculos en rewardPerToken, 3) Usa uint256 en lugar de uint donde sea posible, 4) Combina las funciones stake, withdraw y getReward en una sola función multicall."
+      responses:
+        '200':
+          description: Contrato refinado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateSuccessResponse'
+        '400':
+          description: Error en la solicitud o en la compilación del contrato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    GenerateRequest:
+      type: object
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: |
+            Descripción en lenguaje natural del contrato a generar.
+            
+            El prompt debe ser lo más específico posible, incluyendo:
+            - Tipo de contrato (ERC20, ERC721, swap, etc.)
+            - Nombre y símbolo para tokens
+            - Funcionalidades requeridas
+            - Restricciones de acceso (si aplica)
+            - Interacciones con otros contratos (si aplica)
+          example: "Crea un token ERC20 simple llamado \"MiToken\" con símbolo \"MTK\" y 18 decimales."
+    
+    RefineRequest:
+      type: object
+      required:
+        - source
+        - prompt
+      properties:
+        source:
+          type: string
+          description: |
+            Código fuente completo del contrato existente.
+            
+            Debe incluir:
+            - Todas las importaciones
+            - Licencia SPDX
+            - Versión de Solidity
+            - Definición completa del contrato
+          example: "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\nimport \"@openzeppelin/contracts/token/ERC20/ERC20.sol\";\n\ncontract MiToken is ERC20 {\n    constructor() ERC20(\"MiToken\", \"MTK\") {}\n}"
+        prompt:
+          type: string
+          description: |
+            Instrucciones detalladas para modificar el contrato.
+            
+            Las instrucciones deben:
+            - Especificar claramente qué cambios se requieren
+            - Mencionar cualquier nueva funcionalidad a añadir
+            - Indicar si hay código existente que debe modificarse
+            - Especificar restricciones o consideraciones especiales
+          example: "Agrega una función mint que solo pueda ser llamada por el owner."
+    
+    GenerateSuccessResponse:
+      type: object
+      required:
+        - source
+      properties:
+        source:
+          type: string
+          description: |
+            Código fuente completo del contrato generado.
+            
+            Incluye:
+            - Todas las importaciones necesarias
+            - Licencia SPDX
+            - Versión de Solidity
+            - Implementación completa del contrato
+          example: "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\nimport \"@openzeppelin/contracts/token/ERC20/ERC20.sol\";\nimport \"@openzeppelin/contracts/access/Ownable.sol\";\n\ncontract MiToken is ERC20, Ownable {\n    constructor() ERC20(\"MiToken\", \"MTK\") {}\n\n    function mint(address to, uint256 amount) public onlyOwner {\n        _mint(to, amount);\n    }\n}"
+        abi:
+          type: array
+          description: |
+            ABI (Application Binary Interface) del contrato.
+            
+            El ABI es una representación JSON de las funciones, eventos y errores del contrato,
+            que permite a aplicaciones externas interactuar con el contrato en la blockchain.
+          items:
+            type: object
+        bytecode:
+          type: string
+          description: |
+            Bytecode del contrato compilado.
+            
+            Este es el código binario que se despliega en la blockchain.
+            Puede usarse directamente para desplegar el contrato usando herramientas como web3.js, ethers.js, o Hardhat.
+        warnings:
+          type: array
+          description: |
+            Advertencias generadas durante la compilación.
+            
+            Estas advertencias no impiden que el contrato funcione, pero pueden indicar
+            posibles problemas o mejores prácticas que no se están siguiendo.
+          items:
+            type: object
+        attempts:
+          type: integer
+          description: |
+            Número de intentos realizados para generar el contrato.
+            
+            El sistema intenta hasta 3 veces corregir automáticamente errores de compilación.
+    
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: |
+            Mensaje de error principal.
+            
+            Indica el tipo general de error que ocurrió.
+          example: "Error al generar el contrato"
+        details:
+          type: string
+          description: |
+            Detalles adicionales del error.
+            
+            Proporciona información más específica sobre lo que salió mal.
+          example: "Error de compilación en la línea 15: Variable no declarada"
+        source:
+          type: string
+          description: |
+            Código fuente del contrato con errores.
+            
+            Este es el último código generado antes de que fallara la compilación.
+        errors:
+          type: array
+          description: |
+            Lista detallada de errores de compilación.
+            
+            Cada error incluye información sobre su severidad, mensaje y ubicación en el código.
+          items:
+            type: object
+            properties:
+              severity:
+                type: string
+                enum: [error, warning]
+                description: |
+                  Nivel de severidad del error.
+                  - error: Impide la compilación del contrato
+                  - warning: No impide la compilación pero indica posibles problemas
+              message:
+                type: string
+                description: Mensaje de error en formato simple
+              formattedMessage:
+                type: string
+                description: |
+                  Mensaje de error formateado con información adicional como
+                  número de línea, columna y contexto del código.
+        warnings:
+          type: array
+          description: |
+            Lista de advertencias de compilación.
+            
+            Estas advertencias no impiden la compilación pero indican posibles problemas.
+          items:
+            type: object
+        attempts:
+          type: integer
+          description: |
+            Número de intentos realizados antes de fallar.
+            
+            El sistema intenta hasta 3 veces corregir automáticamente errores de compilación.
+
+x-tagGroups:
+  - name: Endpoints
+    tags:
+      - Contratos
+
+x-components:
+  messages:
+    ErrorCompilacion:
+      description: |
+        ## Errores comunes de compilación y cómo solucionarlos
+
+        ### 1. Versión de Solidity incorrecta
+        - **Error**: "Source file requires different compiler version"
+        - **Solución**: Asegúrese de usar versiones de Solidity compatibles (0.8.0-0.8.9 para OpenZeppelin, 0.8.29 para Uniswap V3)
+
+        ### 2. Importaciones incorrectas
+        - **Error**: "File not found" o "Import file not found"
+        - **Solución**: Verifique las rutas de importación y asegúrese de usar las versiones correctas de las bibliotecas
+
+        ### 3. Funciones no implementadas
+        - **Error**: "Function has to be implemented"
+        - **Solución**: Implemente todas las funciones requeridas por las interfaces que está utilizando
+
+        ### 4. Problemas de compatibilidad
+        - **Error**: "Derived contract must override function"
+        - **Solución**: Asegúrese de que las versiones de las bibliotecas sean compatibles entre sí
+
+    LimitacionesAPI:
+      description: |
+        ## Limitaciones y consideraciones
+
+        ### Tamaño del contrato
+        - Los contratos muy grandes pueden no compilarse correctamente debido a limitaciones de gas
+        - Considere dividir la funcionalidad en múltiples contratos si es necesario
+
+        ### Complejidad
+        - Los contratos muy complejos pueden requerir múltiples refinamientos
+        - Para funcionalidades avanzadas, considere generar un contrato base y luego refinarlo
+
+        ### Versiones de bibliotecas
+        - Esta API soporta OpenZeppelin 4.9.3 y Uniswap V3 1.0.0
+        - Otras versiones pueden no ser compatibles
+
+        ### Seguridad
+        - Siempre audite los contratos generados antes de desplegarlos en producción
+        - La API genera código funcional pero no garantiza que sea seguro para todos los casos de uso

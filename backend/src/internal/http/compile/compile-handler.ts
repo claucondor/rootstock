@@ -1,8 +1,9 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { SolidityCompilerService } from '../../solidity-compiler';
+import { SolidityCompilerService } from '../../solidity-compiler/index';
 
 interface CompileRequestBody {
   source: string;
+  contractName?: string;
 }
 
 export async function compileHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -13,7 +14,7 @@ export async function compileHandler(request: FastifyRequest, reply: FastifyRepl
   }
   const compiler = new SolidityCompilerService();
   try {
-    const result = await compiler.compileSolidity(body.source);
+    const result = await compiler.compileSolidity(body.source, body.contractName);
     if (result.errors && result.errors.length > 0) {
       reply.code(400).send({ errors: result.errors, warnings: result.warnings });
       return;

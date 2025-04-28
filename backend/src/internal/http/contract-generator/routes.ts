@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import { contractGeneratorHandler } from './handler';
+import { generateContractHandler } from './handler';
+import { refineContractHandler } from './refine-handler';
 
-export default async function contractGeneratorRoutes(fastify: FastifyInstance) {
-  fastify.post('/', contractGeneratorHandler);
-} 
+export function registerContractGeneratorRoutes(server: FastifyInstance) {
+  server.post('/generate', generateContractHandler);
+  server.post('/refine', refineContractHandler);
+}

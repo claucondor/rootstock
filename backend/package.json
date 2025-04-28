@@ -5,13 +5,21 @@
   "scripts": {
     "dev": "ts-node src/cmd/solidity-compiler-api/index.ts",
     "build": "tsc",
-    "start": "node dist/cmd/solidity-compiler-api/index.js"
+    "start": "node dist/cmd/solidity-compiler-api/index.js",
+    "docs": "node docs/serve-docs.js"
   },
   "dependencies": {
     "@fastify/cors": "^11.0.1",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@openzeppelin/contracts": "^4.9.3",
+    "@openzeppelin/contracts-upgradeable": "^4.9.3",
+    "@uniswap/v3-core": "^1.0.0",
+    "@uniswap/v3-periphery": "^1.0.0",
     "axios": "^1.8.4",
     "dotenv": "^16.3.1",
+    "ethers": "^5.8.0",
     "fastify": "^5.3.2",
+    "hardhat": "^2.23.0",
     "solc": "^0.8.29"
   },
   "devDependencies": {
