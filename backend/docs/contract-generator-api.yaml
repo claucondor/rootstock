@@ -7,7 +7,6 @@ info:
     y refinar contratos existentes con instrucciones específicas.
 
     ## Frameworks Soportados
-
     ### OpenZeppelin 4.9.3
     - **Componentes disponibles**:
       - Access Control: Ownable, AccessControl
@@ -40,10 +39,6 @@ info:
     3. Compilación y verificación del contrato
     4. Corrección automática de errores (hasta 3 intentos)
     5. Devolución del contrato compilado con su ABI y bytecode
-  version: 1.0.0
-  contact:
-    name: Soporte Técnico
-    email: support@example.com
 
 servers:
   - url: http://localhost:8080
@@ -197,7 +192,7 @@ components:
           type: string
           description: |
             Descripción en lenguaje natural del contrato a generar.
-            
+
             El prompt debe ser lo más específico posible, incluyendo:
             - Tipo de contrato (ERC20, ERC721, swap, etc.)
             - Nombre y símbolo para tokens
@@ -205,7 +200,7 @@ components:
             - Restricciones de acceso (si aplica)
             - Interacciones con otros contratos (si aplica)
           example: "Crea un token ERC20 simple llamado \"MiToken\" con símbolo \"MTK\" y 18 decimales."
-    
+
     RefineRequest:
       type: object
       required:
@@ -216,7 +211,7 @@ components:
           type: string
           description: |
             Código fuente completo del contrato existente.
-            
+
             Debe incluir:
             - Todas las importaciones
             - Licencia SPDX
@@ -227,14 +222,14 @@ components:
           type: string
           description: |
             Instrucciones detalladas para modificar el contrato.
-            
+
             Las instrucciones deben:
             - Especificar claramente qué cambios se requieren
             - Mencionar cualquier nueva funcionalidad a añadir
             - Indicar si hay código existente que debe modificarse
             - Especificar restricciones o consideraciones especiales
           example: "Agrega una función mint que solo pueda ser llamada por el owner."
-    
+
     GenerateSuccessResponse:
       type: object
       required:
@@ -244,7 +239,7 @@ components:
           type: string
           description: |
             Código fuente completo del contrato generado.
-            
+
             Incluye:
             - Todas las importaciones necesarias
             - Licencia SPDX
@@ -255,7 +250,7 @@ components:
           type: array
           description: |
             ABI (Application Binary Interface) del contrato.
-            
+
             El ABI es una representación JSON de las funciones, eventos y errores del contrato,
             que permite a aplicaciones externas interactuar con el contrato en la blockchain.
           items:
@@ -264,14 +259,14 @@ components:
           type: string
           description: |
             Bytecode del contrato compilado.
-            
+
             Este es el código binario que se despliega en la blockchain.
             Puede usarse directamente para desplegar el contrato usando herramientas como web3.js, ethers.js, o Hardhat.
         warnings:
           type: array
           description: |
             Advertencias generadas durante la compilación.
-            
+
             Estas advertencias no impiden que el contrato funcione, pero pueden indicar
             posibles problemas o mejores prácticas que no se están siguiendo.
           items:
@@ -280,9 +275,36 @@ components:
           type: integer
           description: |
             Número de intentos realizados para generar el contrato.
-            
+
             El sistema intenta hasta 3 veces corregir automáticamente errores de compilación.
-    
+        analysis:
+          type: object
+          description: |
+            Resultados del análisis del contrato generado
+          properties:
+            functionDescriptions:
+              type: object
+              description: |
+                Descripciones detalladas de cada función del contrato
+                formato: { "función": "descripción", ... }
+              example:
+                mint:
+                  "Permite emitir nuevos tokens al sistema con un límite de 1000 tokens por transacción"
+                burn:
+                  "Permite quemar tokens existentes, reduciendo la oferta total en circulación"
+            diagramData:
+              type: object
+              description: |
+                Datos para visualizar el contrato como un diagrama de flujo
+                formato: { nodes: [], edges: [], explanation: "texto" }
+              example:
+                nodes:
+                  - { id: "mint", type: "function", data: { label: "Mint" }, position: { x: 100, y: 200 }}
+                  - { id: "burn", type: "function", data: { label: "Burn" }, position: { x: 300, y: 200 }}
+                edges:
+                  - { id: "mint-burn", source: "mint", target: "burn", label: "permite" }
+                explanation: "El contrato incluye funciones de mint y burn para controlar la oferta de tokens"
+
     ErrorResponse:
       type: object
       properties:
@@ -290,27 +312,27 @@ components:
           type: string
           description: |
             Mensaje de error principal.
-            
+
             Indica el tipo general de error que ocurrió.
           example: "Error al generar el contrato"
         details:
           type: string
           description: |
             Detalles adicionales del error.
-            
+
             Proporciona información más específica sobre lo que salió mal.
           example: "Error de compilación en la línea 15: Variable no declarada"
         source:
           type: string
           description: |
             Código fuente del contrato con errores.
-            
+
             Este es el último código generado antes de que fallara la compilación.
         errors:
           type: array
           description: |
             Lista detallada de errores de compilación.
-            
+
             Cada error incluye información sobre su severidad, mensaje y ubicación en el código.
           items:
             type: object
@@ -330,20 +352,20 @@ components:
                 description: |
                   Mensaje de error formateado con información adicional como
                   número de línea, columna y contexto del código.
-        warnings:
-          type: array
-          description: |
-            Lista de advertencias de compilación.
-            
-            Estas advertencias no impiden la compilación pero indican posibles problemas.
-          items:
-            type: object
-        attempts:
-          type: integer
-          description: |
-            Número de intentos realizados antes de fallar.
-            
-            El sistema intenta hasta 3 veces corregir automáticamente errores de compilación.
+          warnings:
+            type: array
+            description: |
+              Lista de advertencias de compilación.
+
+              Estas advertencias no impiden la compilación pero indican posibles problemas.
+            items:
+              type: object
+          attempts:
+            type: integer
+            description: |
+              Número de intentos realizados antes de fallar.
+
+              El sistema intenta hasta 3 veces corregir automáticamente errores de compilación.
 
 x-tagGroups:
   - name: Endpoints
