@@ -15,4 +15,10 @@ export interface CompilationOutput {
   warnings?: CompilationError[];
   abi?: any;
   bytecode?: string;
+  functionDescriptions?: Record<string, string>;
+  diagramData?: {
+    nodes: any[];
+    edges: any[];
+    explanation: string;
+  };
 }

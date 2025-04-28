@@ -59,16 +59,22 @@ function DeployButton({ contract, account, network }) {
   };
 
   return (
-    <div className="card overflow-hidden">
-      <div className="card-header flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Deploy Contract</h2>
-        <div className="text-xs text-muted">
-          Network: <span className="font-medium">{network.name}</span>
+    <div className="deploy-card">
+      <div className="deploy-card-header">
+        <div className="flex items-center">
+          <div className="deploy-icon-container mr-3">
+            <i className="fa-solid fa-rocket"></i>
+          </div>
+          <h2 className="text-lg font-bold">Deploy Contract</h2>
+        </div>
+        <div className="network-badge-modern">
+          <span className="network-dot"></span>
+          {network.name}
         </div>
       </div>
       
-      <div className="card-body">
-        <p className="text-sm mb-4">
+      <div className="deploy-card-body">
+        <p className="text-sm mb-6 text-gray-600">
           Deploy your smart contract to the {network.name} blockchain.
           You'll need {network.currency} in your wallet to pay for gas fees.
         </p>
@@ -76,17 +82,17 @@ function DeployButton({ contract, account, network }) {
         <button
           onClick={handleDeploy}
           disabled={loading || !contract || !account}
-          className={`btn w-full ${
+          className={`deploy-button ${
             loading
-              ? 'btn-gray'
+              ? 'deploy-loading'
               : !contract || !account
-                ? 'btn-gray'
-                : 'btn-success'
+                ? 'deploy-disabled'
+                : 'deploy-ready'
           }`}
         >
           {loading ? (
             <span className="flex items-center justify-center">
-              <i className="fa-solid fa-spinner fa-spin mr-2"></i>
+              <div className="loading-spinner mr-2"></div>
               Deploying...
             </span>
           ) : (
@@ -98,30 +104,33 @@ function DeployButton({ contract, account, network }) {
         </button>
 
         {error && (
-          <div className="mt-4 p-3 bg-danger bg-opacity-10 text-danger text-sm rounded-lg">
-            <strong>Error:</strong> {error}
+          <div className="deploy-error-message">
+            <i className="fa-solid fa-triangle-exclamation mr-2"></i>
+            {error}
           </div>
         )}
 
         {txHash && !success && (
-          <div className="mt-4 p-3 bg-primary bg-opacity-10 rounded-lg">
-            <div className="flex items-center mb-2">
-              <i className="fa-solid fa-circle-notch fa-spin mr-2 text-primary"></i>
-              <span className="font-medium">Transaction in progress...</span>
+          <div className="deploy-status-card deploy-pending">
+            <div className="flex items-center mb-3">
+              <div className="status-icon pending">
+                <i className="fa-solid fa-circle-notch fa-spin"></i>
+              </div>
+              <span className="font-medium">Transaction in progress</span>
             </div>
-            <p className="text-sm font-medium mt-2">Transaction Hash:</p>
-            <div className="flex items-center mt-1">
+            <p className="text-sm font-medium mb-2">Transaction Hash:</p>
+            <div className="hash-container">
               <a
                 href={getExplorerUrl(txHash)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-primary break-all hover:underline"
+                className="hash-link"
               >
                 {txHash}
               </a>
               <button
                 onClick={() => navigator.clipboard.writeText(txHash)}
-                className="ml-2 text-xs text-muted hover:text-primary"
+                className="copy-button"
                 title="Copy to clipboard"
               >
                 <i className="fa-regular fa-copy"></i>
@@ -131,33 +140,35 @@ function DeployButton({ contract, account, network }) {
         )}
 
         {success && deployedAddress && (
-          <div className="mt-4 p-4 bg-success bg-opacity-10 text-success rounded-lg animate-fade-in">
-            <div className="flex items-center mb-2">
-              <i className="fa-solid fa-circle-check mr-2"></i>
-              <strong>Contract deployed successfully!</strong>
+          <div className="deploy-status-card deploy-success">
+            <div className="flex items-center mb-3">
+              <div className="status-icon success">
+                <i className="fa-solid fa-circle-check"></i>
+              </div>
+              <span className="font-medium">Contract deployed successfully!</span>
             </div>
             
-            <p className="text-sm font-medium mt-2">Contract Address:</p>
-            <div className="flex items-center mt-1">
+            <p className="text-sm font-medium mb-2">Contract Address:</p>
+            <div className="hash-container">
               <a
                 href={getAddressExplorerUrl(deployedAddress)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm break-all hover:underline"
+                className="hash-link"
               >
                 {deployedAddress}
               </a>
               <button
                 onClick={() => navigator.clipboard.writeText(deployedAddress)}
-                className="ml-2 text-xs hover:text-primary"
+                className="copy-button"
                 title="Copy to clipboard"
               >
                 <i className="fa-regular fa-copy"></i>
               </button>
             </div>
             
-            <div className="mt-3 flex items-center">
-              <i className="fa-solid fa-lightbulb text-warning mr-2"></i>
+            <div className="tip-container">
+              <i className="fa-solid fa-lightbulb mr-2"></i>
               <p className="text-sm">
                 Click on the <strong>Interaction</strong> tab in the editor to interact with your deployed contract.
               </p>

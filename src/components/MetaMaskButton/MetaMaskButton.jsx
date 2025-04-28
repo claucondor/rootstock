@@ -92,7 +92,8 @@ function MetaMaskButton({ account, onConnect }) {
   return (
     <div className="flex items-center">
       {error && (
-        <div className="text-danger text-sm mr-2 animate-fade-in">
+        <div className="error-tooltip animate-fade-in">
+          <i className="fa-solid fa-triangle-exclamation mr-1"></i>
           {error}
         </div>
       )}
@@ -101,34 +102,39 @@ function MetaMaskButton({ account, onConnect }) {
         <button
           onClick={handleConnect}
           disabled={loading}
-          className={`btn ${
+          className={`wallet-button ${
             isConnected
-              ? 'btn-success'
+              ? 'wallet-connected'
               : loading
-                ? 'btn-gray'
-                : 'btn-primary'
+                ? 'wallet-loading'
+                : 'wallet-connect'
           }`}
         >
           {loading ? (
             <span className="flex items-center">
-              <i className="fa-solid fa-spinner fa-spin mr-2"></i>
+              <div className="loading-spinner mr-2"></div>
               Connecting...
             </span>
           ) : isConnected ? (
             <span className="flex items-center">
-              <i className="fa-solid fa-wallet mr-2"></i>
+              <div className="wallet-icon-container mr-2">
+                <i className="fa-solid fa-wallet"></i>
+              </div>
               {account ? `${account.substring(0, 6)}...${account.substring(account.length - 4)}` : 'Connected'}
             </span>
           ) : (
             <span className="flex items-center">
-              <i className="fa-brands fa-ethereum mr-2"></i>
-              Connect MetaMask
+              <div className="metamask-icon-container mr-2">
+                <i className="fa-brands fa-ethereum"></i>
+              </div>
+              Connect Wallet
             </span>
           )}
         </button>
         
         {isConnected && networkName && (
-          <div className="absolute top-full right-0 mt-1 text-xs font-medium px-2 py-1 rounded bg-primary bg-opacity-10 text-primary">
+          <div className="network-pill">
+            <span className="network-dot"></span>
             {networkName}
           </div>
         )}
