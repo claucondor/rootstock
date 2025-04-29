@@ -1,11 +1,12 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { ContractGeneratorService } from '../../contract-generator';
-import { ContractAnalyzerService } from '../../contract-analyzer';
+import { GenerateRequest } from './types';
 
-interface GenerateRequest {
-  prompt: string;
-}
-
+/**
+ * Handler for generating a smart contract from a prompt
+ * @param request HTTP request
+ * @param reply HTTP response
+ */
 export async function generateContractHandler(
   request: FastifyRequest,
   reply: FastifyReply
@@ -13,20 +14,27 @@ export async function generateContractHandler(
   const { prompt } = request.body as GenerateRequest;
   
   if (!prompt?.trim()) {
-    return reply.code(400).send({ error: 'Se requiere un prompt válido' });
+    request.log.error('Empty or invalid prompt received');
+    return reply.code(400).send({ error: 'Valid prompt is required' });
   }
 
+  request.log.info({ prompt }, 'Starting contract generation with prompt');
   const contractGenerator = new ContractGeneratorService();
-  const contractAnalyzer = new ContractAnalyzerService();
+  
   try {
+    request.log.info('Generating contract...');
     const generatedContract = await contractGenerator.generateContract(prompt);
-    const analysis = await contractAnalyzer.analyzeContract(
-      generatedContract.source,
-      generatedContract.abi
-    );
-    
-    // Si hay errores de compilación, devolver un código de estado 400
+    request.log.info({ 
+      hasErrors: generatedContract.errors?.length ?? 0 > 0,
+      attempts: generatedContract.attempts,
+      warnings: generatedContract.warnings?.length
+    }, 'Contract generated');
+
     if (generatedContract.errors && generatedContract.errors.length > 0) {
+      request.log.error({ 
+        errors: generatedContract.errors,
+        source: generatedContract.source
+      }, 'Errors in contract generation');
       return reply.code(400).send({
         source: generatedContract.source,
         errors: generatedContract.errors,
@@ -35,21 +43,22 @@ export async function generateContractHandler(
       });
     }
     
-    // Devolver el contrato generado con su ABI y bytecode
+    // Return the generated contract with its ABI and bytecode
     return reply.send({
       source: generatedContract.source,
       abi: generatedContract.abi,
       bytecode: generatedContract.bytecode,
       warnings: generatedContract.warnings,
-      attempts: generatedContract.attempts || 1,
-      analysis: {
-        functionDescriptions: analysis.functionDescriptions,
-        diagramData: analysis.diagramData
-      }
+      attempts: generatedContract.attempts || 1
     });
   } catch (error) {
+    request.log.error({ 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    }, 'Error during contract generation process');
+    
     return reply.code(500).send({
-      error: 'Error al generar el contrato',
+      error: 'Error generating contract',
       details: error instanceof Error ? error.message : String(error)
     });
   }

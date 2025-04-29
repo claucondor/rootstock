@@ -11,7 +11,15 @@ import 'reactflow/dist/style.css';
 interface ContractVisualizerProps {
   contractData?: {
     sourceCode?: string;
+    analysis?: string;
   };
+}
+
+// Tipo para los datos del diagrama que vienen de la API
+interface DiagramData {
+  nodes: any[];
+  edges: any[];
+  explanation?: string;
 }
 
 const ContractVisualizer = ({ contractData = {} }: ContractVisualizerProps) => {
@@ -104,27 +112,71 @@ const ContractVisualizer = ({ contractData = {} }: ContractVisualizerProps) => {
 
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
+  const [diagramExplanation, setDiagramExplanation] = useState<string | null>(null);
 
-  // En una implementación real, podrías utilizar el sourceCode para generar dinámicamente
-  // los nodos basados en la estructura del contrato (variables, funciones, eventos, etc.)
-  // mediante análisis de código o similares.
   useEffect(() => {
-    if (contractData.sourceCode) {
-      // Aquí iría la lógica para analizar el código y generar nodos actualizados
-      // Por ahora, simplemente mantenemos la visualización predeterminada
-      console.log('Código del contrato recibido:', contractData.sourceCode.substring(0, 100) + '...');
+    // Si tenemos datos de análisis, intentamos extraer los datos del diagrama
+    if (contractData.analysis) {
+      try {
+        const analysisData = JSON.parse(contractData.analysis);
+        
+        if (analysisData.diagramData) {
+          const diagramData = analysisData.diagramData as DiagramData;
+          
+          // Convertir los nodos de la API al formato esperado por ReactFlow
+          if (diagramData.nodes && diagramData.nodes.length > 0) {
+            const apiNodes = diagramData.nodes.map(node => ({
+              ...node,
+              // Asegurarnos de que los nodos tienen los campos necesarios
+              id: node.id,
+              data: node.data || { label: node.label || node.id },
+              position: node.position || { x: 0, y: 0 },
+              style: node.style || {}
+            }));
+            setNodes(apiNodes);
+          }
+          
+          // Convertir las aristas de la API al formato esperado por ReactFlow
+          if (diagramData.edges && diagramData.edges.length > 0) {
+            const apiEdges = diagramData.edges.map(edge => ({
+              ...edge,
+              // Asegurarnos de que las aristas tienen los campos necesarios
+              id: edge.id || `e-${edge.source}-${edge.target}`,
+              source: edge.source,
+              target: edge.target,
+              animated: edge.animated || false
+            }));
+            setEdges(apiEdges);
+          }
+          
+          // Guardar la explicación del diagrama si existe
+          if (diagramData.explanation) {
+            setDiagramExplanation(diagramData.explanation);
+          }
+        }
+      } catch (error) {
+        console.error("Error al procesar los datos del diagrama:", error);
+      }
+    } else if (contractData.sourceCode) {
+      // Si no tenemos datos de análisis pero sí el código fuente, podríamos
+      // generar un diagrama básico en el cliente (aunque no lo implementaremos por ahora)
+      console.log('Código del contrato recibido, pero sin datos de diagrama');
     }
-  }, [contractData.sourceCode]);
+  }, [contractData.analysis, contractData.sourceCode]);
 
   return (
     <div className="p-6">
       <h3 className="text-xl font-bold mb-6 text-white">Contract Structure</h3>
       
       <div className="text-gray-300 mb-4 text-sm">
-        <p>Visualización detallada de la estructura del contrato inteligente, incluyendo variables, funciones y eventos.</p>
+        {diagramExplanation ? (
+          <p>{diagramExplanation}</p>
+        ) : (
+          <p>Visualización detallada de la estructura del contrato inteligente, incluyendo variables, funciones y eventos.</p>
+        )}
       </div>
 
-      <div className="h-[600px] rounded-lg overflow-hidden border border-gray-800">
+      <div style={{ width: '100%', height: '600px' }} className="rounded-lg overflow-hidden border border-gray-800">
         <ReactFlow
           nodes={nodes}
           edges={edges}

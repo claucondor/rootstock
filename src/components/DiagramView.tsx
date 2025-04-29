@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls, 
@@ -19,12 +19,31 @@ interface DiagramViewProps {
   className?: string;
 }
 
+// Tipo para los datos del diagrama que vienen de la API
+interface DiagramData {
+  nodes: any[];
+  edges: any[];
+  explanation?: string;
+  flowData?: {
+    nodes: any[];
+    edges: any[];
+  };
+}
+
+interface NodeData {
+  title: string;
+  subtitle?: string;
+  content?: string;
+  bgColor?: string;
+  label?: string;
+}
+
 // Componente para cada nodo
-const CustomNode = ({ data }: { data: any }) => {
+const CustomNode = ({ data }: { data: NodeData }) => {
   return (
     <Card className={`${data.bgColor || 'bg-gray-800'} border-gray-700 w-full max-w-[250px]`}>
       <CardHeader className="py-2 px-3">
-        <CardTitle className="text-sm">{data.title}</CardTitle>
+        <CardTitle className="text-sm">{data.title || data.label}</CardTitle>
         {data.subtitle && (
           <CardDescription className="text-xs">{data.subtitle}</CardDescription>
         )}
@@ -46,15 +65,53 @@ const nodeTypes = {
 const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('structure');
+  const [diagramData, setDiagramData] = useState<DiagramData | null>(null);
+  const [diagramExplanation, setDiagramExplanation] = useState<string | null>(null);
+  
+  // Efecto para procesar los datos del análisis cuando cambia el contrato
+  useEffect(() => {
+    if (contract?.analysis) {
+      try {
+        const analysisData = JSON.parse(contract.analysis);
+        
+        if (analysisData.diagramData) {
+          setDiagramData(analysisData.diagramData);
+          
+          if (analysisData.diagramData.explanation) {
+            setDiagramExplanation(analysisData.diagramData.explanation);
+          }
+        }
+      } catch (error) {
+        console.error("Error al procesar los datos del diagrama:", error);
+      }
+    } else {
+      // Resetear cuando no hay contrato o análisis
+      setDiagramData(null);
+      setDiagramExplanation(null);
+    }
+  }, [contract]);
   
   // Función para generar los nodos basados en el contrato
-  const generateNodes = (): Node[] => {
+  const generateNodes = (): Node<NodeData>[] => {
+    // Si tenemos datos del diagrama de la API, usarlos
+    if (diagramData?.nodes && diagramData.nodes.length > 0) {
+      return diagramData.nodes.map(node => ({
+        ...node,
+        id: node.id,
+        type: 'custom',
+        position: node.position || { x: 0, y: 0 },
+        data: {
+          title: node.data?.label || node.data?.title || node.id,
+          subtitle: node.data?.subtitle,
+          content: node.data?.content,
+          bgColor: node.data?.bgColor || 'bg-gray-800'
+        }
+      }));
+    }
+    
+    // En caso contrario, usar el diagrama por defecto
     if (!contract) return [];
     
-    // En una aplicación real, esto analizaría el código del contrato
-    // para generar automáticamente los nodos basados en variables, funciones, etc.
-    
-    // Ejemplo de nodos
     return [
       // Nodo del contrato principal
       {
@@ -62,41 +119,9 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
         type: 'custom',
         position: { x: 400, y: 50 },
         data: { 
-          title: 'RootstockToken',
-          subtitle: 'ERC20, Burnable, Pausable',
+          title: contract.name || 'Contract',
+          subtitle: 'Smart Contract',
           bgColor: 'bg-blue-900'
-        }
-      },
-      
-      // Herencias
-      {
-        id: 'erc20',
-        type: 'custom',
-        position: { x: 200, y: 180 },
-        data: { 
-          title: 'ERC20',
-          subtitle: 'Interfaz Base',
-          bgColor: 'bg-purple-900'
-        }
-      },
-      {
-        id: 'burnable',
-        type: 'custom',
-        position: { x: 400, y: 180 },
-        data: { 
-          title: 'ERC20Burnable',
-          subtitle: 'Extensión',
-          bgColor: 'bg-purple-900'
-        }
-      },
-      {
-        id: 'pausable',
-        type: 'custom',
-        position: { x: 600, y: 180 },
-        data: { 
-          title: 'Pausable',
-          subtitle: 'Seguridad',
-          bgColor: 'bg-purple-900'
         }
       },
       
@@ -110,36 +135,6 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
           bgColor: 'bg-gray-800'
         }
       },
-      {
-        id: 'name',
-        type: 'custom',
-        position: { x: 50, y: 400 },
-        data: { 
-          title: 'name',
-          content: 'string',
-          bgColor: 'bg-gray-700'
-        }
-      },
-      {
-        id: 'symbol',
-        type: 'custom',
-        position: { x: 150, y: 400 },
-        data: { 
-          title: 'symbol', 
-          content: 'string',
-          bgColor: 'bg-gray-700'
-        }
-      },
-      {
-        id: 'owner',
-        type: 'custom',
-        position: { x: 250, y: 400 },
-        data: { 
-          title: 'owner', 
-          content: 'address',
-          bgColor: 'bg-gray-700'
-        }
-      },
       
       // Funciones
       {
@@ -149,36 +144,6 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
         data: { 
           title: 'Funciones',
           bgColor: 'bg-gray-800'
-        }
-      },
-      {
-        id: 'transfer',
-        type: 'custom',
-        position: { x: 350, y: 400 },
-        data: { 
-          title: 'transfer()', 
-          content: 'Transfiere tokens',
-          bgColor: 'bg-green-900'
-        }
-      },
-      {
-        id: 'mint',
-        type: 'custom',
-        position: { x: 450, y: 400 },
-        data: { 
-          title: 'mint()', 
-          content: 'Crea nuevos tokens',
-          bgColor: 'bg-green-900'
-        }
-      },
-      {
-        id: 'pause',
-        type: 'custom',
-        position: { x: 550, y: 400 },
-        data: { 
-          title: 'pause()', 
-          content: 'Pausa transferencias',
-          bgColor: 'bg-yellow-900'
         }
       },
       
@@ -191,32 +156,27 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
           title: 'Eventos',
           bgColor: 'bg-gray-800'
         }
-      },
-      {
-        id: 'transfer-event',
-        type: 'custom',
-        position: { x: 700, y: 400 },
-        data: { 
-          title: 'Transfer',
-          content: 'from, to, value',
-          bgColor: 'bg-orange-900'
-        }
-      },
-      {
-        id: 'approval-event',
-        type: 'custom',
-        position: { x: 825, y: 400 },
-        data: { 
-          title: 'Approval',
-          content: 'owner, spender, value',
-          bgColor: 'bg-orange-900'
-        }
-      },
+      }
     ];
   };
   
   // Generar aristas (conexiones)
   const generateEdges = (): Edge[] => {
+    // Si tenemos datos del diagrama de la API, usarlos
+    if (diagramData?.edges && diagramData.edges.length > 0) {
+      return diagramData.edges.map(edge => ({
+        ...edge,
+        // Convertir al formato exacto que espera ReactFlow
+        id: edge.id || `e-${edge.source}-${edge.target}`,
+        source: edge.source,
+        target: edge.target,
+        animated: edge.animated || false,
+        type: edge.type || 'default',
+        style: edge.style || {}
+      }));
+    }
+    
+    // En caso contrario, usar el diagrama por defecto
     return [
       // Conexiones de herencia
       { id: 'e-contract-erc20', source: 'contract', target: 'erc20', animated: true },
@@ -243,7 +203,31 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
     ];
   };
 
+  // Generar el diagrama de flujo
   const generateFlowChart = (): { nodes: Node[], edges: Edge[] } => {
+    // Si tenemos datos del diagrama de flujo de la API, usarlos
+    if (diagramData?.flowData) {
+      return {
+        nodes: diagramData.flowData.nodes.map(node => ({
+          ...node,
+          id: node.id,
+          type: 'custom',
+          position: node.position || { x: 0, y: 0 },
+          data: {
+            ...node.data,
+            title: node.data?.label || node.data?.title || node.id,
+          }
+        })),
+        edges: diagramData.flowData.edges.map(edge => ({
+          ...edge,
+          id: edge.id || `e-${edge.source}-${edge.target}`,
+          source: edge.source,
+          target: edge.target
+        }))
+      };
+    }
+    
+    // En caso contrario, usar un diagrama de flujo predeterminado simple
     return {
       nodes: [
         {
@@ -251,82 +235,47 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
           type: 'custom',
           position: { x: 400, y: 50 },
           data: { 
-            title: 'Desplegar Contrato',
-            content: 'Publica el contrato en la testnet',
-            bgColor: 'bg-green-900'
-          }
-        },
-        {
-          id: 'transfer-tokens',
-          type: 'custom',
-          position: { x: 250, y: 150 },
-          data: { 
-            title: 'Transferir Tokens',
-            content: 'Enviar tokens entre cuentas',
+            title: 'Deploy Contract',
             bgColor: 'bg-blue-900'
-          }
-        },
-        {
-          id: 'manage-token',
-          type: 'custom',
-          position: { x: 550, y: 150 },
-          data: { 
-            title: 'Administrar Token',
-            content: 'Funciones del propietario',
-            bgColor: 'bg-purple-900'
-          }
-        },
-        {
-          id: 'user-balance',
-          type: 'custom',
-          position: { x: 150, y: 250 },
-          data: { 
-            title: 'Consultar Balance',
-            content: 'Ver tokens de una cuenta',
-            bgColor: 'bg-gray-800'
-          }
-        },
-        {
-          id: 'approve-spend',
-          type: 'custom',
-          position: { x: 350, y: 250 },
-          data: { 
-            title: 'Aprobar Gastos',
-            content: 'Permitir a otros gastar tokens',
-            bgColor: 'bg-gray-800'
           }
         },
         {
           id: 'mint',
           type: 'custom',
-          position: { x: 450, y: 250 },
+          position: { x: 400, y: 150 },
           data: { 
-            title: 'Acuñar Tokens',
-            content: 'Crear nuevos tokens',
-            bgColor: 'bg-yellow-900'
+            title: 'Mint Tokens',
+            bgColor: 'bg-green-900'
           }
         },
         {
-          id: 'pause',
+          id: 'transfer',
           type: 'custom',
-          position: { x: 650, y: 250 },
+          position: { x: 250, y: 250 },
           data: { 
-            title: 'Pausar/Reanudar',
-            content: 'Controlar transferencias',
-            bgColor: 'bg-yellow-900'
+            title: 'Transfer',
+            bgColor: 'bg-green-900'
           }
         },
+        {
+          id: 'burn',
+          type: 'custom',
+          position: { x: 550, y: 250 },
+          data: { 
+            title: 'Burn',
+            bgColor: 'bg-red-900'
+          }
+        }
       ],
       edges: [
-        { id: 'e-deploy-transfer', source: 'deploy', target: 'transfer-tokens' },
-        { id: 'e-deploy-manage', source: 'deploy', target: 'manage-token' },
-        { id: 'e-transfer-balance', source: 'transfer-tokens', target: 'user-balance' },
-        { id: 'e-transfer-approve', source: 'transfer-tokens', target: 'approve-spend' },
-        { id: 'e-manage-mint', source: 'manage-token', target: 'mint' },
-        { id: 'e-manage-pause', source: 'manage-token', target: 'pause' },
+        { id: 'e-deploy-mint', source: 'deploy', target: 'mint', animated: true },
+        { id: 'e-mint-transfer', source: 'mint', target: 'transfer' },
+        { id: 'e-mint-burn', source: 'mint', target: 'burn' }
       ]
     };
   };
+
+  const flowDiagram = generateFlowChart();
 
   if (!contract) {
     return (
@@ -337,7 +286,6 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
   }
 
   const structureDiagram = { nodes: generateNodes(), edges: generateEdges() };
-  const flowDiagram = generateFlowChart();
 
   const getActiveNodes = () => {
     return activeTab === 'structure' ? structureDiagram.nodes : flowDiagram.nodes;
@@ -348,129 +296,71 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
   };
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Visualización del Contrato</h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? (
-            <>
-              <ChevronUp className="h-4 w-4 mr-2" />
-              Compactar
-            </>
-          ) : (
-            <>
-              <ChevronDown className="h-4 w-4 mr-2" />
-              Expandir
-            </>
-          )}
-        </Button>
-      </div>
-      
-      <p className="text-gray-400">
-        Visualización detallada de la estructura y flujo de operación del contrato {contract.name}.
-      </p>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="structure">Estructura</TabsTrigger>
-          <TabsTrigger value="flow">Flujo de Operación</TabsTrigger>
-        </TabsList>
-      </Tabs>
-      
+    <div className={`relative ${className}`}>
       <div 
-        className={`border border-gray-700 rounded-lg overflow-hidden transition-all duration-300 ${
-          expanded ? 'h-[700px]' : 'h-[450px]'
-        }`}
+        className={`transition-all duration-300 ${expanded ? 'h-[700px]' : 'h-[500px]'}`}
+        style={{ width: '100%' }}
       >
-        <ReactFlow
-          nodes={getActiveNodes()}
-          edges={getActiveEdges()}
-          nodeTypes={nodeTypes}
-          fitView
-          minZoom={0.5}
-          maxZoom={1.5}
-          attributionPosition="bottom-left"
-        >
-          <Controls />
-          <MiniMap
-            className="bg-gray-900 border border-gray-700"
-            nodeColor={(n) => {
-              const bgColor = n.data?.bgColor || 'bg-gray-800';
-              switch (bgColor) {
-                case 'bg-blue-900': return '#3182ce';
-                case 'bg-green-900': return '#38a169';
-                case 'bg-purple-900': return '#805ad5';
-                case 'bg-yellow-900': return '#d69e2e';
-                case 'bg-orange-900': return '#dd6b20';
-                default: return '#2d3748';
-              }
-            }}
-          />
-          <Background color="#666" gap={16} size={1} />
-          
-          <Panel position="top-right">
-            <div className="flex space-x-2">
-              <Button variant="outline" size="icon" title="Zoom In">
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" title="Zoom Out">
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" title="Fullscreen">
-                <Maximize2 className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" title="Descargar Diagrama">
-                <Download className="h-4 w-4" />
+        <Tabs defaultValue="structure" className="h-full flex flex-col" onValueChange={setActiveTab}>
+          <div className="flex items-center justify-between px-2">
+            <TabsList>
+              <TabsTrigger value="structure">Structure</TabsTrigger>
+              <TabsTrigger value="flow">Flow</TabsTrigger>
+            </TabsList>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => setExpanded(!expanded)}>
+                {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </div>
-          </Panel>
-        </ReactFlow>
-      </div>
-      
-      <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-2">Leyenda</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-blue-900 rounded mr-2"></div>
-            <span className="text-sm text-gray-300">Contrato Principal</span>
           </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-purple-900 rounded mr-2"></div>
-            <span className="text-sm text-gray-300">Herencias</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-green-900 rounded mr-2"></div>
-            <span className="text-sm text-gray-300">Funciones Básicas</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-yellow-900 rounded mr-2"></div>
-            <span className="text-sm text-gray-300">Funciones Admin</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-orange-900 rounded mr-2"></div>
-            <span className="text-sm text-gray-300">Eventos</span>
-          </div>
-        </div>
+
+          <TabsContent 
+            value="structure" 
+            className="h-full flex-grow overflow-hidden m-0 p-0"
+            style={{ minHeight: '400px' }}
+          >
+            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+              <ReactFlow
+                nodes={getActiveNodes()}
+                edges={getActiveEdges()}
+                nodeTypes={nodeTypes}
+                fitView
+                className="bg-background"
+              >
+                <Controls />
+                <MiniMap />
+                <Background />
+              </ReactFlow>
+            </div>
+          </TabsContent>
+
+          <TabsContent 
+            value="flow" 
+            className="h-full flex-grow overflow-hidden m-0 p-0"
+            style={{ minHeight: '400px' }}
+          >
+            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+              <ReactFlow
+                nodes={diagramData?.flowData?.nodes || []}
+                edges={diagramData?.flowData?.edges || []}
+                nodeTypes={nodeTypes}
+                fitView
+                className="bg-background"
+              >
+                <Controls />
+                <MiniMap />
+                <Background />
+              </ReactFlow>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-2">Documentación</h3>
-        <div className="space-y-4 text-sm text-gray-300">
-          <p>Este diagrama muestra la estructura completa del contrato {contract.name}, incluyendo:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Herencias y dependencias del contrato</li>
-            <li>Variables de estado y su visibilidad</li>
-            <li>Funciones públicas y su accesibilidad</li>
-            <li>Eventos emitidos por el contrato</li>
-            <li>Relaciones entre los diferentes componentes</li>
-          </ul>
-          <p>El diagrama de flujo muestra cómo interactuar con el contrato y las operaciones principales que se pueden realizar.</p>
+      {diagramExplanation && (
+        <div className="mt-4 text-sm text-muted-foreground">
+          <p>{diagramExplanation}</p>
         </div>
-      </div>
+      )}
     </div>
   );
 };

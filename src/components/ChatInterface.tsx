@@ -100,9 +100,10 @@ const ChatInterface = () => {
   const [generatedAbi, setGeneratedAbi] = useState<string>(DEFAULT_ABI);
   const [generatedBytecode, setGeneratedBytecode] = useState<string>(DEFAULT_BYTECODE);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [apiData, setApiData] = useState<any>(null);
   const { toast } = useToast();
   const { saveContract } = useContractStorage();
-  const [functionExplanations, setFunctionExplanations] = useState({
+  const [functionExplanations, setFunctionExplanations] = useState<Record<string, string>>({
     mint: 'Crea tokens de forma segura y creativa',
     burn: 'Reduce tokens con efectos dinámicos',
     transfer: 'Transfiere tokens de manera fluida',
@@ -115,10 +116,15 @@ const ChatInterface = () => {
       setGenerationProgress(0);
       const interval = setInterval(() => {
         setGenerationProgress(prev => {
-          const newProgress = prev + Math.random() * 10;
+          // Ajustar para aproximadamente 80 segundos totales
+          // Incrementos más pequeños para un progreso más realista
+          const incremento = prev < 50 ? 1.5 : // Primeros 50%: incremento más rápido
+                             prev < 80 ? 0.8 : // 50-80%: incremento medio
+                             0.3;              // 80-99%: incremento más lento
+          const newProgress = prev + incremento;
           return newProgress > 95 ? 95 : newProgress;
         });
-      }, 300);
+      }, 1000); // Actualizar cada segundo
       
       return () => {
         clearInterval(interval);
@@ -134,38 +140,141 @@ const ChatInterface = () => {
     setLoading(true);
     
     try {
-      // Simulación de generación - En un entorno real, esto haría una llamada API
-      setTimeout(() => {
-        // Simulamos el resultado de la generación
-        const contractName = "RootstockToken"; // En un entorno real, esto vendría de la respuesta
-        
-        toast({
-          title: `Contrato ${isRefineMode ? 'refinado' : 'generado'} correctamente`,
-          description: `El contrato ${contractName} ha sido ${isRefineMode ? 'refinado' : 'creado'} exitosamente.`,
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://solidity-compiler-api-466947410626.us-central1.run.app';
+      
+      // Determinar si estamos generando o refinando
+      const endpoint = isRefineMode ? '/refine' : '/generate';
+      
+      // Preparar el payload según el modo
+      const payload = isRefineMode ? {
+        source: generatedCode, // El código actual que queremos refinar
+        prompt: prompt
+      } : {
+        prompt: prompt
+      };
+
+      console.log(`Llamando a la API: ${apiUrl}${endpoint}`, payload);
+
+      // Configurar un timeout más largo (2 minutos = 120000 ms)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+      const response = await fetch(`${apiUrl}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+
+      // Limpiar el timeout
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error en la generación del contrato');
+      }
+
+      const data = await response.json();
+      console.log("Respuesta de la API recibida:", data);
+      
+      // Guardar la respuesta completa de la API
+      setApiData(data);
+      
+      // Actualizar el estado con la respuesta de la API
+      setGeneratedCode(data.sourceCode || data.source);
+      setGeneratedAbi(JSON.stringify(data.abi, null, 2));
+      setGeneratedBytecode(data.bytecode);
+
+      // Extraer el nombre del contrato del código fuente
+      const contractName = extractContractName(data.sourceCode || data.source) || "UnnamedContract";
+
+      // Utilizar las descripciones de funciones proporcionadas por la API, o generarlas si no están disponibles
+      if (data.analysis && data.analysis.functionDescriptions) {
+        setFunctionExplanations(data.analysis.functionDescriptions);
+      } else {
+        // Fallback: generar explicaciones basadas en el ABI
+        const newFunctionExplanations = generateFunctionExplanations(data.abi);
+        setFunctionExplanations(newFunctionExplanations);
+      }
+
+      toast({
+        title: `Contrato ${isRefineMode ? 'refinado' : 'generado'} correctamente`,
+        description: `El contrato ${contractName} ha sido ${isRefineMode ? 'refinado' : 'creado'} exitosamente.`,
+      });
+      
+      // Si no estamos en modo refinamiento, guardar el nuevo contrato
+      if (!isRefineMode) {
+        saveContract({
+          name: contractName,
+          description: prompt.substring(0, 100) + (prompt.length > 100 ? '...' : ''),
+          sourceCode: data.sourceCode || data.source,
+          abi: JSON.stringify(data.abi, null, 2),
+          bytecode: data.bytecode,
+          // Guardar también los datos del análisis para uso futuro
+          analysis: data.analysis ? JSON.stringify(data.analysis) : null
         });
-        
-        // Guardamos el contrato generado
-        if (!isRefineMode) {
-          saveContract({
-            id: Date.now().toString(),
-            name: contractName,
-            description: prompt.substring(0, 100) + (prompt.length > 100 ? '...' : ''),
-            sourceCode: DEFAULT_CONTRACT,
-            abi: DEFAULT_ABI,
-            bytecode: DEFAULT_BYTECODE
-          });
-        }
-        
-        setLoading(false);
-      }, 3000);
+      }
     } catch (error) {
+      console.error('Error:', error);
       toast({
         title: "Error en la generación",
-        description: "Ha ocurrido un error al generar el contrato. Por favor, inténtalo de nuevo.",
+        description: error instanceof Error ? error.message : "Ha ocurrido un error al generar el contrato. Por favor, inténtalo de nuevo.",
         variant: "destructive"
       });
+    } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function para extraer el nombre del contrato del código fuente
+  const extractContractName = (sourceCode: string): string | null => {
+    const contractMatch = sourceCode.match(/contract\s+(\w+)/);
+    return contractMatch ? contractMatch[1] : null;
+  };
+
+  // Helper function para generar explicaciones de funciones basadas en el ABI
+  const generateFunctionExplanations = (abi: any[]) => {
+    const explanations: Record<string, string> = {};
+    
+    if (Array.isArray(abi)) {
+      abi.forEach(item => {
+        if (item.type === 'function') {
+          const name = item.name;
+          if (name) {
+            let description = '';
+            
+            // Generar una descripción basada en el nombre y tipo de función
+            if (name.includes('mint')) {
+              description = 'Crea nuevos tokens según parámetros específicos';
+            } else if (name.includes('burn')) {
+              description = 'Destruye tokens existentes';
+            } else if (name.includes('transfer')) {
+              description = 'Transfiere tokens entre direcciones';
+            } else if (name.includes('approve')) {
+              description = 'Aprueba a otra dirección para gastar tokens';
+            } else if (name.includes('allowance')) {
+              description = 'Consulta la cantidad de tokens que un propietario ha aprobado para un gastador';
+            } else if (name.includes('balance')) {
+              description = 'Consulta el saldo de tokens de una dirección';
+            } else if (name.includes('pause')) {
+              description = 'Pausa la funcionalidad del contrato';
+            } else if (name.includes('unpause')) {
+              description = 'Reanuda la funcionalidad del contrato';
+            } else if (name.includes('owner')) {
+              description = 'Consulta o modifica el propietario del contrato';
+            } else {
+              description = `Interactúa con la función ${name}`;
+            }
+            
+            explanations[name] = description;
+          }
+        }
+      });
+    }
+    
+    return explanations;
   };
 
   return (
@@ -268,6 +377,11 @@ const ChatInterface = () => {
                   delay={0.3}
                   hoverEffect={false}
                 >
+                  <div className="mb-2 px-3 py-1 bg-blue-900/30 border border-blue-700/30 rounded-md">
+                    <p className="text-xs text-blue-300">
+                      La generación de contratos puede tomar hasta 90 segundos mientras la IA crea, compila y optimiza tu contrato.
+                    </p>
+                  </div>
                   <GenerationConsole 
                     isGenerating={loading} 
                     progress={generationProgress} 
@@ -419,7 +533,10 @@ const ChatInterface = () => {
                 <CardContent>
                   {generatedCode && (
                     <div className="h-[400px] lg:h-[600px]">
-                      <ContractVisualizer contractData={{ sourceCode: generatedCode }} />
+                      <ContractVisualizer contractData={{ 
+                        sourceCode: generatedCode,
+                        analysis: apiData?.analysis ? JSON.stringify(apiData.analysis) : null 
+                      }} />
                     </div>
                   )}
                 </CardContent>

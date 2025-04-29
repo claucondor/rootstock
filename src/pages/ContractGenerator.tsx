@@ -3,11 +3,11 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ChatInterface from '@/components/ChatInterface';
-import { ArrowLeft, Home, FileCode, Cpu, Book, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, Home, FileCode, Cpu, Book, LayoutGrid, FileJson, Code } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Footer from '@/components/Footer';
 import ContractHistoryList from '@/components/ContractHistoryList';
-import ContractDetailsViewer from '@/components/ContractDetailsViewer';
+import ContractDetailsViewer, { ContractABIViewer, ContractBytecodeViewer } from '@/components/ContractDetailsViewer';
 import useContractStorage from '@/hooks/use-contract-storage';
 import DiagramView from '@/components/DiagramView';
 import DeploymentView from '@/components/DeploymentView';
@@ -17,6 +17,7 @@ import AnimatedCard from '@/components/ui/animated-card';
 
 const ContractGenerator = () => {
   const [activeTab, setActiveTab] = useState('code');
+  const [activeCodeSection, setActiveCodeSection] = useState('source');
   const { contracts, getContract, deleteContract } = useContractStorage();
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
   const [deployedAddress, setDeployedAddress] = useState<string | null>(null);
@@ -38,6 +39,20 @@ const ContractGenerator = () => {
     setActiveTab('interaction');
   };
 
+  // Función para renderizar el panel de código según la subsección activa
+  const renderCodePanel = () => {
+    switch (activeCodeSection) {
+      case 'source':
+        return <ContractDetailsViewer contract={selectedContract} />;
+      case 'abi':
+        return <ContractABIViewer contract={selectedContract} />;
+      case 'bytecode':
+        return <ContractBytecodeViewer contract={selectedContract} />;
+      default:
+        return <ContractDetailsViewer contract={selectedContract} />;
+    }
+  };
+
   // Función para renderizar el panel derecho según la pestaña activa
   const renderRightPanel = () => {
     switch (activeTab) {
@@ -50,7 +65,40 @@ const ContractGenerator = () => {
             transition={{ duration: 0.3 }}
             className="bg-gray-900 rounded-lg p-6"
           >
-            <ContractDetailsViewer contract={selectedContract} />
+            <div className="mb-4">
+              <Tabs 
+                value={activeCodeSection} 
+                onValueChange={setActiveCodeSection}
+                className="w-full"
+              >
+                <TabsList className="grid grid-cols-3 mb-4">
+                  <TabsTrigger value="source">
+                    <Code className="h-4 w-4 mr-2" />
+                    Código Fuente
+                  </TabsTrigger>
+                  <TabsTrigger value="abi">
+                    <FileJson className="h-4 w-4 mr-2" />
+                    ABI
+                  </TabsTrigger>
+                  <TabsTrigger value="bytecode">
+                    <FileCode className="h-4 w-4 mr-2" />
+                    Bytecode
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="source" className="mt-0">
+                  <ContractDetailsViewer contract={selectedContract} />
+                </TabsContent>
+                
+                <TabsContent value="abi" className="mt-0">
+                  <ContractABIViewer contract={selectedContract} />
+                </TabsContent>
+                
+                <TabsContent value="bytecode" className="mt-0">
+                  <ContractBytecodeViewer contract={selectedContract} />
+                </TabsContent>
+              </Tabs>
+            </div>
           </motion.div>
         );
       case 'diagram':

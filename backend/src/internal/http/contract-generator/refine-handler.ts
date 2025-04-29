@@ -7,9 +7,9 @@ interface RefineContractRequest {
 }
 
 /**
- * Manejador para refinar un contrato existente
- * @param request Solicitud HTTP
- * @param reply Respuesta HTTP
+ * Handler for refining an existing smart contract
+ * @param request HTTP Request containing the source code and refinement instructions
+ * @param reply HTTP Response
  */
 export async function refineContractHandler(
   request: FastifyRequest,
@@ -18,20 +18,27 @@ export async function refineContractHandler(
   const { source, prompt } = request.body as RefineContractRequest;
   
   if (!source?.trim()) {
-    return reply.code(400).send({ error: 'Se requiere el código fuente del contrato' });
+    return reply.code(400).send({ 
+      error: 'Contract source code is required',
+      details: 'Please provide the complete source code of the contract to refine'
+    });
   }
   
   if (!prompt?.trim()) {
-    return reply.code(400).send({ error: 'Se requiere un prompt con instrucciones para modificar el contrato' });
+    return reply.code(400).send({ 
+      error: 'Refinement instructions are required',
+      details: 'Please provide clear instructions on how to modify the contract'
+    });
   }
 
   const contractGenerator = new ContractGeneratorService();
   try {
     const generatedContract = await contractGenerator.refineContract(source, prompt);
     
-    // Si hay errores de compilación, devolver un código de estado 400
+    // If there are compilation errors, return a 400 status code
     if (generatedContract.errors && generatedContract.errors.length > 0) {
       return reply.code(400).send({
+        error: 'Contract compilation failed',
         source: generatedContract.source,
         errors: generatedContract.errors,
         warnings: generatedContract.warnings,
@@ -39,7 +46,7 @@ export async function refineContractHandler(
       });
     }
     
-    // Devolver el contrato refinado con su ABI y bytecode
+    // Return the refined contract with its ABI and bytecode
     return reply.send({
       source: generatedContract.source,
       abi: generatedContract.abi,
@@ -48,8 +55,9 @@ export async function refineContractHandler(
       attempts: generatedContract.attempts || 1
     });
   } catch (error) {
+    console.error('Error refining contract:', error);
     return reply.code(500).send({
-      error: 'Error al refinar el contrato',
+      error: 'Failed to refine contract',
       details: error instanceof Error ? error.message : String(error)
     });
   }

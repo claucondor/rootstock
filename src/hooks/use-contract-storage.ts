@@ -9,6 +9,7 @@ export interface Contract {
   bytecode: string;
   createdAt: string;
   lastUpdatedAt: string;
+  analysis?: string;
 }
 
 export interface UseContractStorageReturnType {

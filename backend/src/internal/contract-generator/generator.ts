@@ -3,6 +3,9 @@ import { SolidityCompilerService } from '../solidity-compiler';
 import { COMBINED_CONTEXT, COMBINED_REFINE_CONTEXT } from './templates';
 import { GeneratedContract } from './types';
 import { CompilationError } from '../solidity-compiler/types';
+import pino from 'pino';
+
+const logger = pino();
 
 /**
  * Clase para la generación de contratos inteligentes
@@ -31,31 +34,47 @@ export class ContractGenerator {
     let attempt = 0;
     let lastErrors: CompilationError[] = [];
     
+    logger.info({ prompt }, 'Starting contract generation');
+    
     while (attempt < this.MAX_RETRIES) {
       attempt++;
+      logger.info({ attempt }, `Starting generation attempt ${attempt}`);
       
       try {
-        // En el primer intento, generamos el contrato desde cero
-        // En los siguientes intentos, pedimos al LLM que corrija los errores
+        // On first attempt, generate the contract from scratch
+        // On subsequent attempts, ask the LLM to fix errors
         if (attempt === 1) {
+          logger.info('Calling LLM model to generate initial contract');
           const response = await this.openRouter.callModel([
             { role: 'system', content: COMBINED_CONTEXT },
             { role: 'user', content: prompt }
           ]);
           
-          // Extraer solo el código del contrato (eliminar markdown si existe)
+          // Extract only the contract code (remove markdown if present)
           sourceCode = response.replace(/```(solidity)?|```/g, '').trim();
+          logger.info({ sourceLength: sourceCode.length }, 'Initial code generated');
         } else {
-          // Para los reintentos, enviamos el código con errores al LLM para que lo corrija
+          logger.info({ 
+            errorCount: lastErrors.length,
+            attempt 
+          }, 'Attempting to fix contract errors');
           sourceCode = await this.fixContractErrors(sourceCode, lastErrors, prompt);
+          logger.info({ sourceLength: sourceCode.length }, 'Fixed code generated');
         }
         
-        // Compilar el contrato generado
+        // Compile the generated contract
+        logger.info('Compiling contract...');
         const compilationResult = await this.compiler.compileSolidity(sourceCode);
         
-        // Si no hay errores, retornamos el resultado exitoso
+        // If no errors, return the successful result
         if (!compilationResult.errors || compilationResult.errors.length === 0) {
-          console.log(`Contrato compilado exitosamente en el intento ${attempt}`);
+          logger.info({ 
+            attempt,
+            hasAbi: !!compilationResult.abi,
+            hasBytecode: !!compilationResult.bytecode,
+            warningCount: compilationResult.warnings?.length || 0
+          }, 'Contract compiled successfully');
+          
           return {
             source: sourceCode,
             abi: compilationResult.abi,
@@ -65,12 +84,22 @@ export class ContractGenerator {
           };
         }
         
-        // Si hay errores, los guardamos para el siguiente intento
+        // If there are errors, save them for the next attempt
         lastErrors = compilationResult.errors;
-        console.log(`Intento ${attempt}: Contrato con errores de compilación. Reintentando...`);
+        logger.warn({ 
+          attempt,
+          errorCount: lastErrors.length,
+          errors: lastErrors
+        }, 'Contract has compilation errors');
         
-        // Si es el último intento y aún hay errores, retornamos el resultado con errores
+        // If this is the last attempt and there are still errors, return the result with errors
         if (attempt >= this.MAX_RETRIES) {
+          logger.error({ 
+            attempt,
+            errorCount: lastErrors.length,
+            errors: lastErrors
+          }, 'Maximum number of attempts reached with errors');
+          
           return {
             source: sourceCode,
             errors: compilationResult.errors,
@@ -79,9 +108,13 @@ export class ContractGenerator {
           };
         }
       } catch (error) {
-        console.error(`Error en el intento ${attempt}:`, error);
+        logger.error({ 
+          attempt,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }, 'Error during generation/compilation');
         
-        // Si es un error de compilación que no se capturó en el bloque anterior
+        // If this is the last attempt and there are still errors, return the result with errors
         if (attempt >= this.MAX_RETRIES) {
           return {
             source: sourceCode,
@@ -93,7 +126,7 @@ export class ContractGenerator {
           };
         }
         
-        // Guardamos el error para el siguiente intento
+        // Save the error for the next attempt
         lastErrors = [{
           severity: 'error',
           message: error instanceof Error ? error.message : String(error)
@@ -101,7 +134,13 @@ export class ContractGenerator {
       }
     }
     
-    // Este código no debería ejecutarse, pero lo incluimos por seguridad
+    // This code should not be executed, but we include it for safety
+    logger.error({ 
+      attempt,
+      errorCount: lastErrors.length,
+      errors: lastErrors
+    }, 'Unexpected completion of contract generation');
+    
     return {
       source: sourceCode,
       errors: lastErrors,
@@ -120,42 +159,61 @@ export class ContractGenerator {
     let lastErrors: CompilationError[] = [];
     let refinedCode = sourceCode;
     
+    logger.info({ 
+      sourceLength: sourceCode.length,
+      prompt 
+    }, 'Starting contract refinement');
+    
     while (attempt < this.MAX_RETRIES) {
       attempt++;
+      logger.info({ attempt }, `Starting refinement attempt ${attempt}`);
       
       try {
-        // En el primer intento, refinamos el contrato original
-        // En los siguientes intentos, pedimos al LLM que corrija los errores
+        // On first attempt, refine the original contract
+        // On subsequent attempts, ask the LLM to fix errors
         if (attempt === 1) {
-          // Creamos un prompt para refinar el contrato
+          // Create a prompt to refine the contract
           const refinePrompt = `
-Contrato existente:
+Existing contract:
 
 \`\`\`solidity
 ${sourceCode}
 \`\`\`
 
-Instrucciones para modificar el contrato:
+Instructions to modify the contract:
 ${prompt}`;
 
+          logger.info('Calling LLM model to refine contract');
           const response = await this.openRouter.callModel([
             { role: 'system', content: COMBINED_REFINE_CONTEXT },
             { role: 'user', content: refinePrompt }
           ]);
           
-          // Extraer solo el código del contrato (eliminar markdown si existe)
+          // Extract only the contract code (remove markdown if present)
           refinedCode = response.replace(/```(solidity)?|```/g, '').trim();
+          logger.info({ refinedLength: refinedCode.length }, 'Refined code generated');
         } else {
-          // Para los reintentos, enviamos el código con errores al LLM para que lo corrija
+          logger.info({ 
+            errorCount: lastErrors.length,
+            attempt 
+          }, 'Attempting to fix errors in refined contract');
           refinedCode = await this.fixContractErrors(refinedCode, lastErrors, prompt);
+          logger.info({ refinedLength: refinedCode.length }, 'Fixed code generated');
         }
         
-        // Compilar el contrato refinado
+        // Compile the refined contract
+        logger.info('Compiling refined contract...');
         const compilationResult = await this.compiler.compileSolidity(refinedCode);
         
-        // Si no hay errores, retornamos el resultado exitoso
+        // If no errors, return the successful result
         if (!compilationResult.errors || compilationResult.errors.length === 0) {
-          console.log(`Contrato refinado y compilado exitosamente en el intento ${attempt}`);
+          logger.info({ 
+            attempt,
+            hasAbi: !!compilationResult.abi,
+            hasBytecode: !!compilationResult.bytecode,
+            warningCount: compilationResult.warnings?.length || 0
+          }, 'Refined contract compiled successfully');
+          
           return {
             source: refinedCode,
             abi: compilationResult.abi,
@@ -165,12 +223,22 @@ ${prompt}`;
           };
         }
         
-        // Si hay errores, los guardamos para el siguiente intento
+        // If there are errors, save them for the next attempt
         lastErrors = compilationResult.errors;
-        console.log(`Intento ${attempt}: Contrato refinado con errores de compilación. Reintentando...`);
+        logger.warn({ 
+          attempt,
+          errorCount: lastErrors.length,
+          errors: lastErrors
+        }, 'Refined contract has compilation errors');
         
-        // Si es el último intento y aún hay errores, retornamos el resultado con errores
+        // If this is the last attempt and there are still errors, return the result with errors
         if (attempt >= this.MAX_RETRIES) {
+          logger.error({ 
+            attempt,
+            errorCount: lastErrors.length,
+            errors: lastErrors
+          }, 'Maximum number of attempts reached with errors in refinement');
+          
           return {
             source: refinedCode,
             errors: compilationResult.errors,
@@ -179,9 +247,13 @@ ${prompt}`;
           };
         }
       } catch (error) {
-        console.error(`Error en el intento ${attempt}:`, error);
+        logger.error({ 
+          attempt,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }, 'Error during refinement/compilation');
         
-        // Si es un error de compilación que no se capturó en el bloque anterior
+        // If this is the last attempt and there are still errors, return the result with errors
         if (attempt >= this.MAX_RETRIES) {
           return {
             source: refinedCode,
@@ -193,7 +265,7 @@ ${prompt}`;
           };
         }
         
-        // Guardamos el error para el siguiente intento
+        // Save the error for the next attempt
         lastErrors = [{
           severity: 'error',
           message: error instanceof Error ? error.message : String(error)
@@ -201,7 +273,13 @@ ${prompt}`;
       }
     }
     
-    // Este código no debería ejecutarse, pero lo incluimos por seguridad
+    // This code should not be executed, but we include it for safety
+    logger.error({ 
+      attempt,
+      errorCount: lastErrors.length,
+      errors: lastErrors
+    }, 'Unexpected completion of contract refinement');
+    
     return {
       source: refinedCode,
       errors: lastErrors,
@@ -210,10 +288,10 @@ ${prompt}`;
   }
   
   /**
-   * Envía el contrato con errores al LLM para que lo corrija
+   * Sends the contract with errors to the LLM for correction
    * @param sourceCode Código fuente del contrato con errores
    * @param errors Errores de compilación
-   * @param originalPrompt Prompt original para mantener el contexto
+   * @param originalPrompt Original prompt to maintain context
    * @returns Código fuente corregido
    */
   private async fixContractErrors(
@@ -221,34 +299,34 @@ ${prompt}`;
     errors: CompilationError[], 
     originalPrompt: string
   ): Promise<string> {
-    // Formateamos los errores para que sean más legibles
+    // Format errors for easier readability
     const formattedErrors = errors.map(err => 
       `- ${err.severity.toUpperCase()}: ${err.formattedMessage || err.message}`
     ).join('\n');
     
-    // Creamos un prompt para corregir los errores
+    // Create a prompt to fix errors
     const fixPrompt = `
-He generado el siguiente contrato Solidity basado en tu solicitud:
+I generated the following Solidity contract based on your request:
 
 \`\`\`solidity
 ${sourceCode}
 \`\`\`
 
-Sin embargo, el compilador ha encontrado los siguientes errores:
+However, the compiler found the following errors:
 
 ${formattedErrors}
 
-Por favor, corrige estos errores y devuelve el contrato completo corregido. 
-Mantén la funcionalidad original solicitada: "${originalPrompt}".
-Responde SOLO con el código del contrato corregido, sin explicaciones adicionales.`;
+Please correct these errors and return the complete corrected contract. 
+Maintain the original functionality requested: "${originalPrompt}".
+Respond ONLY with the corrected contract code, without additional explanations.`;
 
-    // Enviamos el prompt al LLM
+    // Send the prompt to the LLM
     const response = await this.openRouter.callModel([
       { role: 'system', content: COMBINED_CONTEXT },
       { role: 'user', content: fixPrompt }
     ]);
     
-    // Extraemos el código corregido
+    // Extract the corrected code
     return response.replace(/```(solidity)?|```/g, '').trim();
   }
 }

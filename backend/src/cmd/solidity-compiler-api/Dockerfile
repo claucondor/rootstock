@@ -15,15 +15,21 @@ COPY package.json package-lock.json hardhat.config.ts tsconfig.json ./
 COPY src/cmd/solidity-compiler-api/.env ./dist/src/cmd/solidity-compiler-api/.env
 # Tambien copiar a la raiz por si acaso
 COPY src/cmd/solidity-compiler-api/.env ./
+# Copiar el script de inicio
+COPY src/cmd/solidity-compiler-api/start.sh /app/start.sh
 
 # Crear directorio contracts e instalar dependencias
 RUN mkdir -p contract && \
     # Instalar dependencias de produccion
     npm ci --omit=dev --ignore-scripts && \
     # Instalar hardhat y paquetes relacionados para compilacion
-    npm install --no-save hardhat@2.23.0 @nomiclabs/hardhat-ethers@2.2.3 ethers@5.8.0 @openzeppelin/contracts@5.3.0 && \
+    npm install --no-save hardhat@2.23.0 @nomiclabs/hardhat-ethers@2.2.3 ethers@5.8.0 @openzeppelin/contracts@4.9.3 && \
+    # Verificar que los contratos de OpenZeppelin estén instalados correctamente
+    ls -la node_modules/@openzeppelin/contracts && \
     # Limpiar cache de npm para reducir tamaño de imagen
-    npm cache clean --force
+    npm cache clean --force && \
+    # Asegurar que el script de inicio tenga permisos de ejecución
+    chmod +x /app/start.sh
 
 # Establecer variables de entorno
 ENV NODE_ENV=production
@@ -35,4 +41,4 @@ LABEL org.opencontainers.image.licenses="MIT"
 # Cloud Run establecera la variable PORT
 # La aplicacion esta configurada para usar esta variable
 
-CMD ["node", "dist/src/cmd/solidity-compiler-api/index.js"]
+CMD ["/app/start.sh"]
