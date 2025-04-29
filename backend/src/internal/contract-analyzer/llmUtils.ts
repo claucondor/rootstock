@@ -85,7 +85,7 @@ export function extractAndParseJson<T>(
 }
 
 /**
- * Calls the LLM model via OpenRouter with structured error handling.
+ * Calls the LLM model via OpenRouter with structured error handling and logging.
  * @param openRouterClient Instance of OpenRouterClient.
  * @param messages The array of messages for the prompt.
  * @param context Description of the call for logging.
@@ -97,24 +97,51 @@ export async function callLlm(
   context: string
 ): Promise<string | null> {
   logger.info(`Calling LLM for ${context}...`);
+  // logger.debug({ messages, context }, 'LLM Request Messages');
+
   try {
+    // *** Reverted: callModel likely returns string directly ***
     const response = await openRouterClient.callModel(messages);
+
+    // Log the raw response string for debugging
+    logger.debug({ rawResponse: response, context }, 'Raw LLM Response String');
+
+    // Check if the response string is empty or null
     if (!response) {
-      logger.warn(`LLM returned empty response for ${context}.`);
+      logger.warn(`LLM returned empty or null response string for ${context}.`);
       return null;
     }
+
+    // Optional: Add checks here if the response string indicates an error
+    // e.g., if (response.startsWith('Error:')) { ... }
+
     logger.info(`LLM call successful for ${context}.`);
-    // Log first few chars for debugging?
-    // logger.debug(`LLM response snippet for ${context}: ${response.substring(0, 100)}...`);
-    return response;
-  } catch (error) {
-    logger.error(
-      {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-      `LLM call failed for ${context}`
+    logger.debug(
+      `LLM response string snippet for ${context}: ${response.substring(0, 100)}...`
     );
-    return null;
+    return response; // Return the string directly
+
+  } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          context,
+        },
+        `Error during or after LLM call for ${context}`
+      );
+       // Specific check for the TypeError observed in logs
+       if (error instanceof TypeError && error.message.includes("Cannot read properties of undefined (reading '0')")) {
+           logger.error(`Caught specific TypeError in callLlm for ${context}, likely from OpenRouterClient handling an API error response internally. Returning null.`);
+           // This error likely happens inside callModel, so returning null is appropriate
+           return null;
+       }
+       if (error instanceof Error && error.message.includes('rate limit')) {
+            logger.warn(`Rate limit likely hit during call for ${context}. Returning null.`);
+            return null;
+       }
+      // For other types of errors, returning null to prevent cascading failures
+      logger.error(`Unhandled error during LLM call for ${context}. Returning null.`);
+      return null;
   }
 } 

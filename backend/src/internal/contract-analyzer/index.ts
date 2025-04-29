@@ -22,36 +22,6 @@ const logger = pino();
 const MAX_CORRECTION_RETRIES = 2;
 
 /**
- * Interface for details about a single analyzed function
- */
-interface AnalyzedFunctionDetails {
-  description: string;
-  source?: string; // Make optional as extraction might fail
-  example?: string; // Make optional as generation might fail
-  security?: Array<{
-    // Make optional as generation might fail
-    type: 'warning' | 'info' | 'error';
-    message: string;
-  }>;
-}
-
-/**
- * Interface for the complete function analysis result
- */
-export interface FunctionAnalyses {
-  [functionName: string]: AnalyzedFunctionDetails;
-}
-
-/**
- * Interface for diagram data
- */
-export interface DiagramData {
-  nodes: any[];
-  edges: any[];
-  explanation: string;
-}
-
-/**
  * Service for analyzing smart contracts using LLM, including generating
  * function details and validated Mermaid diagrams.
  */

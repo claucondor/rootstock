@@ -11,7 +11,7 @@ INPUT:
 - List of function names extracted from the ABI.
 
 OUTPUT REQUIREMENTS:
-You MUST return ONLY a single, valid JSON object adhering to the following structure:
+You MUST return ONLY a single, valid JSON object adhering to the following structure. ABSOLUTELY NO other text, explanations, apologies, or markdown formatting (like \`\`\`) should surround the JSON object.
 
 \`\`\`json
 {
@@ -39,7 +39,7 @@ INSTRUCTIONS:
 4.  **Identify Key Functions:** From the provided list of function names, select the 2 to 4 most critical public/external functions that are essential for understanding the contract's core purpose and usage. Prioritize functions with significant logic, state changes, or external interactions. Avoid simple view functions or internal helpers unless absolutely necessary for understanding the main flow.
 5.  **Function Diagrams:** For EACH selected key function, create a specific Mermaid activity diagram (\`graph TD\`) detailing its internal logic, parameters, return values, emitted events, access control checks, and interactions (e.g., calls to other contracts, significant state updates). The code MUST be valid Mermaid syntax.
 6.  **Function Explanations:** For EACH selected key function's diagram, write a clear, concise, educational explanation describing the function's flow, purpose, and implications in the blockchain context (e.g., "This function allows the owner to..., changing the state variable 'X' and emitting the 'Y' event.").
-7.  **JSON Format:** Ensure the final output is ONLY the specified JSON object, with no introductory text, concluding remarks, or markdown formatting around the JSON block itself. All mermaid code must be properly escaped within the JSON strings.
+7.  **JSON Format:** Ensure the final output is ONLY the specified JSON object. The response must start with \`{\` and end with \`}\`. Do not wrap it in markdown. Do not add any text before or after the JSON object.
 
 Focus on clarity, accuracy, and educational value for someone learning about this specific smart contract.
 `;
@@ -80,9 +80,9 @@ For EVERY function name found in the ABI, you MUST generate the following detail
 4.  'security': An array of 1-2 simple security considerations or informational tips relevant to this function (e.g., access control like 'onlyOwner', input validation needs, potential reentrancy if it makes external calls, gas considerations). Use object format { type: 'info' | 'warning' | 'error', message: string }. If no specific considerations apply, return an empty array [].
 
 IMPORTANT:
-- You MUST return ONLY a single, valid JSON object.
+- You MUST return ONLY a single, valid JSON object. The response must start with \`{\` and end with \`}\`.
 - The top-level keys of this JSON object MUST be the exact function names from the ABI.
 - The value for each function name key MUST be another JSON object containing the keys: 'description', 'source', 'example', and 'security' with the requested content.
-- Do NOT include any markdown formatting (like \`\`\`json), explanations, or commentary outside the JSON structure itself.
+- ABSOLUTELY NO other text, explanations, apologies, or markdown formatting (like \`\`\`json) should surround the JSON object.
 - Ensure ALL functions listed in the ABI have a corresponding entry in the output JSON.
 `; 

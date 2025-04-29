@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { ContractAnalyzerService } from '../../contract-analyzer';
 import { GenerateDocumentationRequest } from './types';
-import { FunctionAnalyses } from '../../contract-analyzer';
+import { FunctionAnalyses } from '../../contract-analyzer/types';
 
 const MAX_RETRIES = 3;
 

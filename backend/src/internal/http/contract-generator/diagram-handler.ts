@@ -1,12 +1,12 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { ContractAnalyzerService } from '../../contract-analyzer';
 import { GenerateDiagramRequest } from './types';
-import { FunctionAnalyses } from '../../contract-analyzer';
+import { ContractAnalysisOutput } from '../../contract-analyzer/types';
 
 const MAX_RETRIES = 3;
 
 /**
- * Handler for generating diagram data for a smart contract
+ * Handler for generating analysis data (including diagrams) for a smart contract
  * @param request HTTP request
  * @param reply HTTP response
  */
@@ -14,13 +14,12 @@ export async function generateDiagramHandler(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
-  const { source, abi, functionDescriptions } =
-    request.body as GenerateDiagramRequest;
+  const { source, abi } = request.body as GenerateDiagramRequest;
 
-  if (!source || !abi) {
+  if (!source || !abi || !Array.isArray(abi)) {
     return reply
       .status(400)
-      .send({ error: 'Source code and ABI are required' });
+      .send({ error: 'Source code and a valid ABI array are required' });
   }
 
   const contractAnalyzer = new ContractAnalyzerService();
@@ -32,33 +31,31 @@ export async function generateDiagramHandler(
     try {
       request.log.info(
         { attempt },
-        `Starting diagram generation attempt ${attempt}...`
+        `Starting contract analysis attempt ${attempt}...`
       );
 
-      // Generate diagram data
-      const diagramData = await contractAnalyzer.generateDiagramData(
+      const analysisResult: ContractAnalysisOutput = await contractAnalyzer.analyzeContract(
         source,
-        abi,
-        {} as FunctionAnalyses
+        abi
       );
 
-      // Check if we got a valid response with required properties
-      if (!diagramData || !diagramData.nodes || !diagramData.edges) {
-        throw new Error('Invalid diagram data generated');
+      if (!analysisResult || !analysisResult.diagramData || !analysisResult.functionAnalyses) {
+        throw new Error('Invalid analysis data structure received from service');
       }
 
       request.log.info(
         {
           attempt,
-          nodeCount: diagramData.nodes.length,
-          edgeCount: diagramData.edges.length,
-          hasExplanation: !!diagramData.explanation,
+          analyzedFunctionCount: Object.keys(analysisResult.functionAnalyses).length,
+          hasGeneralDiagram: !!analysisResult.diagramData.generalDiagram,
+          validatedFunctionDiagramCount: Object.keys(analysisResult.diagramData.functionDiagrams).length
         },
-        'Diagram data generated successfully'
+        'Contract analysis generated successfully'
       );
 
       return reply.send({
-        diagramData,
+        functionAnalyses: analysisResult.functionAnalyses,
+        diagramData: analysisResult.diagramData,
         attempts: attempt,
       });
     } catch (error) {
@@ -69,26 +66,23 @@ export async function generateDiagramHandler(
           error: lastError.message,
           stack: lastError.stack,
         },
-        'Error during diagram generation'
+        'Error during contract analysis'
       );
 
-      // If this is the last attempt, return error response
       if (attempt >= MAX_RETRIES) {
         return reply.code(500).send({
-          error: 'Failed to generate diagram',
+          error: 'Failed to analyze contract',
           details: lastError.message,
           attempts: attempt,
         });
       }
 
-      // Wait a short time before retrying, increasing delay with each attempt
       await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     }
   }
 
-  // This should never be reached due to the return in the error case above
   return reply.code(500).send({
-    error: 'Failed to generate diagram',
+    error: 'Failed to analyze contract after multiple retries',
     details: lastError?.message || 'Unknown error',
     attempts: attempt,
   });
