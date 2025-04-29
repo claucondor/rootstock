@@ -1,30 +1,32 @@
-
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from '@/hooks/use-toast';
 
 const ApiDemo = () => {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{source: string; success: boolean} | null>(null);
+  const [result, setResult] = useState<{
+    source: string;
+    success: boolean;
+  } | null>(null);
   const { toast } = useToast();
 
   const examplePrompts = [
     "Crea un token ERC20 llamado 'RootstockToken' con símbolo 'RSK' y 18 decimales",
-    "Genera un contrato que permita hacer swaps en Uniswap V3 en Rootstock",
-    "Crea un contrato de staking simple que permita a usuarios depositar tokens ERC20",
-    "Genera un contrato que permita a los usuarios proveer liquidez en pools de Uniswap V3"
+    'Genera un contrato que permita hacer swaps en Uniswap V3 en Rootstock',
+    'Crea un contrato de staking simple que permita a usuarios depositar tokens ERC20',
+    'Genera un contrato que permita a los usuarios proveer liquidez en pools de Uniswap V3',
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (prompt.trim() === '') {
       toast({
-        title: "Error",
-        description: "Por favor ingrese un prompt para generar el contrato",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Por favor ingrese un prompt para generar el contrato',
+        variant: 'destructive',
       });
       return;
     }
@@ -68,13 +70,13 @@ contract RootstockToken is ERC20, ERC20Burnable, Pausable, Ownable {
     {
         super._beforeTokenTransfer(from, to, amount);
     }
-}`
+}`,
       });
       setLoading(false);
-      
+
       toast({
-        title: "Contrato generado",
-        description: "El contrato se ha generado correctamente",
+        title: 'Contrato generado',
+        description: 'El contrato se ha generado correctamente',
       });
     }, 2000);
   };
@@ -104,7 +106,7 @@ contract RootstockToken is ERC20, ERC20Burnable, Pausable, Ownable {
 
       <form onSubmit={handleSubmit} className="mb-8">
         <div className="mb-4">
-          <textarea 
+          <textarea
             className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg p-4 min-h-[120px]"
             placeholder="Describe el contrato inteligente que deseas generar..."
             value={prompt}
@@ -113,8 +115,8 @@ contract RootstockToken is ERC20, ERC20Burnable, Pausable, Ownable {
           />
         </div>
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={loading}
           className="w-full py-3 bg-rootstock-primary text-white rounded-lg flex items-center justify-center hover:bg-rootstock-primary/90 transition-colors disabled:bg-gray-700"
         >
@@ -123,7 +125,9 @@ contract RootstockToken is ERC20, ERC20Burnable, Pausable, Ownable {
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               Generando contrato...
             </>
-          ) : 'Generar contrato'}
+          ) : (
+            'Generar contrato'
+          )}
         </button>
       </form>
 
@@ -135,11 +139,16 @@ contract RootstockToken is ERC20, ERC20Burnable, Pausable, Ownable {
         >
           <h4 className="text-white font-semibold mb-2">Contrato generado:</h4>
           <div className="bg-gray-900 rounded-lg p-4 overflow-auto max-h-[400px]">
-            <pre className="text-gray-300 font-mono text-sm whitespace-pre-wrap">{result.source}</pre>
+            <pre className="text-gray-300 font-mono text-sm whitespace-pre-wrap">
+              {result.source}
+            </pre>
           </div>
-          
+
           <div className="mt-4 text-sm text-gray-400">
-            <p>En una implementación real, la respuesta también incluiría el ABI del contrato, bytecode compilado y análisis adicional.</p>
+            <p>
+              En una implementación real, la respuesta también incluiría el ABI
+              del contrato, bytecode compilado y análisis adicional.
+            </p>
           </div>
         </motion.div>
       )}

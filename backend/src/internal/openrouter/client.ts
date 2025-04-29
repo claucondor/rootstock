@@ -17,8 +17,10 @@ export class OpenRouterClient {
    */
   constructor(options?: OpenRouterOptions) {
     this.apiKey = options?.apiKey || process.env.OPENROUTER_API_KEY || '';
-    this.apiUrl = options?.apiUrl || 'https://openrouter.ai/api/v1/chat/completions';
-    this.defaultModel = options?.defaultModel || 'deepseek/deepseek-chat-v3-0324';
+    this.apiUrl =
+      options?.apiUrl || 'https://openrouter.ai/api/v1/chat/completions';
+    this.defaultModel =
+      options?.defaultModel || 'google/gemini-2.5-flash-preview';
     this.defaultMaxTokens = options?.defaultMaxTokens || 2048;
     this.defaultTemperature = options?.defaultTemperature || 0.2;
   }
@@ -39,16 +41,19 @@ export class OpenRouterClient {
         model: options?.model || this.defaultModel,
         messages,
         max_tokens: options?.maxTokens || this.defaultMaxTokens,
-        temperature: options?.temperature !== undefined ? options.temperature : this.defaultTemperature,
+        temperature:
+          options?.temperature !== undefined
+            ? options.temperature
+            : this.defaultTemperature,
       },
       {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
       }
     );
-    
+
     return response.data.choices[0].message.content;
   }
 }

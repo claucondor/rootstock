@@ -96,6 +96,7 @@ gcloud run deploy solidity-compiler-api \
 ```
 
 Ajusta los parámetros según tus necesidades:
+
 - `--region`: La región donde se desplegará el servicio
 - `--memory`: Cantidad de memoria asignada al servicio
 - `--cpu`: Número de CPUs asignadas

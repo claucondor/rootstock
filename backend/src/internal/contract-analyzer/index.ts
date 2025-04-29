@@ -1,14 +1,45 @@
 import { OpenRouterClient } from '../openrouter/client';
 import { ModelMessage } from '../openrouter/types';
 import pino from 'pino';
+import {
+  DIAGRAM_GENERATION_PROMPT,
+  DIAGRAM_CORRECTION_PROMPT,
+  FUNCTION_ANALYSIS_PROMPT,
+} from './prompts';
+import {
+  AnalysisResult,
+  AnalyzedFunctionDetails,
+  ContractAnalysisOutput,
+  DiagramItem,
+  FunctionAnalyses,
+  RawDiagramOutput,
+} from './types';
+import { isValidMermaid } from './mermaidUtils';
+import { extractAndParseJson, callLlm } from './llmUtils';
 
 const logger = pino();
 
+const MAX_CORRECTION_RETRIES = 2;
+
 /**
- * Interface for function descriptions
+ * Interface for details about a single analyzed function
  */
-export interface FunctionDescriptions {
-  [functionName: string]: string;
+interface AnalyzedFunctionDetails {
+  description: string;
+  source?: string; // Make optional as extraction might fail
+  example?: string; // Make optional as generation might fail
+  security?: Array<{
+    // Make optional as generation might fail
+    type: 'warning' | 'info' | 'error';
+    message: string;
+  }>;
+}
+
+/**
+ * Interface for the complete function analysis result
+ */
+export interface FunctionAnalyses {
+  [functionName: string]: AnalyzedFunctionDetails;
 }
 
 /**
@@ -21,7 +52,8 @@ export interface DiagramData {
 }
 
 /**
- * Service for analyzing smart contracts using LLM
+ * Service for analyzing smart contracts using LLM, including generating
+ * function details and validated Mermaid diagrams.
  */
 export class ContractAnalyzerService {
   private openRouterClient: OpenRouterClient;
@@ -31,235 +63,327 @@ export class ContractAnalyzerService {
   }
 
   /**
-   * Analyze a smart contract and generate function descriptions and diagram data
+   * Analyzes a smart contract: generates function details and diagram data.
    * @param source Solidity source code
    * @param abi Contract ABI
-   * @returns Object containing function descriptions and diagram data
+   * @returns Object containing function analyses and validated diagram data
    */
-  public async analyzeContract(source: string, abi: any): Promise<{ functionDescriptions: FunctionDescriptions; diagramData: DiagramData }> {
+  public async analyzeContract(
+    source: string,
+    abi: any[] // ABI is typically an array
+  ): Promise<ContractAnalysisOutput> {
     logger.info('Starting contract analysis');
-    logger.info({ sourceLength: source.length, hasAbi: !!abi }, 'Data received for analysis');
-
-    try {
-      logger.info('Generating function descriptions...');
-      const functionDescriptions = await this.generateFunctionDescriptions(source, abi);
-      logger.info({ 
-        descriptionCount: Object.keys(functionDescriptions).length,
-        hasError: 'error' in functionDescriptions 
-      }, 'Function descriptions generated');
-
-      logger.info('Generating diagram data...');
-      const diagramData = await this.generateDiagramData(source, abi, functionDescriptions);
-      logger.info({ 
-        nodeCount: diagramData.nodes.length,
-        edgeCount: diagramData.edges.length,
-        hasExplanation: !!diagramData.explanation
-      }, 'Diagram data generated');
-
-      return {
-        functionDescriptions,
-        diagramData
-      };
-    } catch (error) {
-      logger.error({ 
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }, 'Error during contract analysis');
-      throw error;
+    if (!abi || !Array.isArray(abi)) {
+      logger.error('Invalid or missing ABI for analysis.');
+      // Return empty/error state appropriate for your frontend
+      throw new Error('Invalid ABI provided for analysis.');
     }
-  }
-
-  /**
-   * Generate descriptions for each function in the contract
-   * @param source Solidity source code
-   * @param abi Contract ABI
-   * @returns Object mapping function names to descriptions
-   */
-  public async generateFunctionDescriptions(source: string, abi: any): Promise<FunctionDescriptions> {
-    logger.info('Preparing messages for LLM model - function descriptions');
-    
-    const messages: ModelMessage[] = [
-      {
-        role: "system",
-        content: `You are a Solidity smart contract analyzer. Your task is to analyze the provided smart contract and generate clear, concise descriptions for each function. 
-        Focus on explaining what each function does, its parameters, return values, and any important side effects or state changes.
-        
-        IMPORTANT: You MUST return ONLY a valid JSON object where keys are function names and values are descriptions.
-        Do NOT include any markdown formatting, explanation, or commentary in your response.
-        The response MUST be a properly formatted JSON object that can be directly parsed.
-        
-        Format: 
-        {
-          "functionName1": "Description of what the function does",
-          "functionName2": "Description of what the function does"
-        }`
-      },
-      {
-        role: "user",
-        content: `Analyze the following Solidity smart contract and provide descriptions for each function.
-        
-        Source code:
-        ${source}
-        
-        ABI:
-        ${JSON.stringify(abi, null, 2)}
-        
-        Return a JSON object with function names as keys and descriptions as values.`
-      }
-    ];
+    logger.info(
+      { sourceLength: source.length, abiLength: abi.length },
+      'Data received for analysis'
+    );
 
     try {
-      logger.info('Calling LLM model to generate descriptions...');
-      const response = await this.openRouterClient.callModel(messages, {
-        temperature: 0.1,
-        maxTokens: 2048
-      });
-      
-      logger.info({ responseLength: response.length }, 'Response received from LLM model');
-      
-      // Extract JSON from the response and parse more safely
-      try {
-        // First try to parse the direct response
-        try {
-          const parsed = JSON.parse(response.trim());
-          logger.info({ functionCount: Object.keys(parsed).length }, 'Function descriptions parsed successfully (direct JSON)');
-          return parsed;
-        } catch (directError) {
-          // If direct parsing fails, try to extract JSON from markdown
-          const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/) || response.match(/```\n([\s\S]*?)\n```/) || response.match(/({[\s\S]*})/);
-          
-          if (jsonMatch && jsonMatch[1]) {
-            const parsed = JSON.parse(jsonMatch[1].trim());
-            logger.info({ functionCount: Object.keys(parsed).length }, 'Function descriptions parsed successfully (from markdown)');
-            return parsed;
-          }
-          
-          // No valid JSON found in the response
-          throw new Error('Failed to parse LLM response as JSON');
-        }
-      } catch (error) {
-        logger.error({ 
-          error: error instanceof Error ? error.message : String(error),
-          response: response.substring(0, 500) // Log part of the response for debugging
-        }, "Error parsing LLM response as JSON");
-        return { error: "Failed to generate function descriptions" };
-      }
-    } catch (error) {
-      logger.error({ 
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }, "Error al llamar al LLM para las descripciones de funciones");
-      return { error: "Failed to generate function descriptions" };
-    }
-  }
-
-  /**
-   * Generate diagram data for visualizing the contract
-   * @param source Solidity source code
-   * @param abi Contract ABI
-   * @param functionDescriptions Previously generated function descriptions
-   * @returns Diagram data for ReactFlow
-   */
-  public async generateDiagramData(source: string, abi: any, functionDescriptions: FunctionDescriptions): Promise<DiagramData> {
-    logger.info('Preparing messages for LLM model - diagram data');
-    
-    const messages: ModelMessage[] = [
-      {
-        role: "system",
-        content: `You are a Solidity smart contract visualizer. Your task is to analyze the provided smart contract and generate data for a ReactFlow diagram.
-        Identify the contract's storage variables, functions, and their interactions.
-        
-        IMPORTANT: You MUST return ONLY a valid JSON object with the specified structure below.
-        Do NOT include any markdown formatting, explanation, or commentary in your response.
-        The response MUST be a properly formatted JSON object that can be directly parsed.
-        
-        Return format:
+      logger.info('Generating function analyses...');
+      const functionAnalyses = await this.generateFunctionAnalyses(source, abi);
+      logger.info(
         {
-          "nodes": [
-            { "id": "string", "type": "string", "data": { "label": "string" }, "position": { "x": number, "y": number } }
-          ],
-          "edges": [
-            { "id": "string", "source": "string", "target": "string", "label": "string" }
-          ],
-          "explanation": "string describing the overall contract architecture and flow"
-        }
-        
-        Node types should be one of: "contract", "function", "storage", "external".
-        Position coordinates should be spaced out appropriately for a clear diagram.`
-      },
-      {
-        role: "user",
-        content: `Analyze the following Solidity smart contract and generate ReactFlow diagram data.
-        
-        Source code:
-        ${source}
-        
-        ABI:
-        ${JSON.stringify(abi, null, 2)}
-        
-        Function descriptions:
-        ${JSON.stringify(functionDescriptions, null, 2)}
-        
-        Return ONLY a valid JSON object with nodes, edges, and an explanation for a ReactFlow diagram.`
-      }
-    ];
+          analyzedFunctionCount: Object.keys(functionAnalyses).length,
+          hasError: 'error' in functionAnalyses, // Basic check if error object returned
+        },
+        'Function analyses generated'
+      );
 
-    try {
-      logger.info('Calling LLM model to generate diagram data...');
-      const response = await this.openRouterClient.callModel(messages, {
-        temperature: 0.1,
-        maxTokens: 3072
-      });
-      
-      logger.info({ responseLength: response.length }, 'Response received from LLM model');
-      
-      // Extract JSON from the response and parse more safely
-      try {
-        // First try to parse the direct response
-        try {
-          const parsed = JSON.parse(response.trim());
-          logger.info({ 
-            nodeCount: parsed.nodes.length,
-            edgeCount: parsed.edges.length
-          }, 'Diagram data parsed successfully (direct JSON)');
-          return parsed;
-        } catch (directError) {
-          // If direct parsing fails, try to extract JSON from markdown
-          const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/) || response.match(/```\n([\s\S]*?)\n```/) || response.match(/({[\s\S]*})/);
-          
-          if (jsonMatch && jsonMatch[1]) {
-            const parsed = JSON.parse(jsonMatch[1].trim());
-            logger.info({ 
-              nodeCount: parsed.nodes.length,
-              edgeCount: parsed.edges.length
-            }, 'Diagram data parsed successfully (from markdown)');
-            return parsed;
-          }
-          
-          // No valid JSON found in the response
-          throw new Error('Failed to parse LLM response as JSON');
-        }
-      } catch (error) {
-        logger.error({ 
-          error: error instanceof Error ? error.message : String(error),
-          response: response.substring(0, 500) // Log part of the response for debugging
-        }, "Error parsing LLM response as JSON");
+      // Basic check if function analysis failed catastrophically
+      if (Object.keys(functionAnalyses).length === 0 && source.length > 0) {
+        logger.warn('Function analysis returned empty results. Skipping diagram generation.');
         return {
-          nodes: [],
-          edges: [],
-          explanation: "Failed to generate diagram data"
+          functionAnalyses,
+          diagramData: { generalDiagram: null, functionDiagrams: {} }, // Return empty diagram data
         };
       }
-    } catch (error) {
-      logger.error({ 
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }, "Error al llamar al LLM para los datos del diagrama");
+
+      logger.info('Generating and validating diagram data...');
+      const diagramData = await this.generateAndValidateDiagramData(
+        source,
+        abi,
+        functionAnalyses
+      );
+      logger.info(
+        {
+          hasGeneralDiagram: !!diagramData.generalDiagram,
+          validatedFunctionDiagramCount: Object.keys(diagramData.functionDiagrams)
+            .length,
+        },
+        'Diagram data generated and validated'
+      );
+
       return {
-        nodes: [],
-        edges: [],
-        explanation: "Failed to generate diagram data"
+        functionAnalyses,
+        diagramData,
       };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        'Error during contract analysis orchestration'
+      );
+      // Re-throw or return a structured error based on frontend needs
+      throw error; // Consider returning a default ContractAnalysisOutput with error flags
     }
+  }
+
+  /**
+   * Generates detailed analysis for each function (description, source, example, security).
+   * Uses FUNCTION_ANALYSIS_PROMPT.
+   * @param source Solidity source code
+   * @param abi Contract ABI (array)
+   * @returns Object mapping function names to their detailed analysis.
+   */
+  public async generateFunctionAnalyses(
+    source: string,
+    abi: any[]
+  ): Promise<FunctionAnalyses> {
+    logger.info('Preparing messages for LLM - detailed function analyses');
+
+    const functionNames = abi
+      .filter((item) => item.type === 'function')
+      .map((item) => item.name);
+
+    if (functionNames.length === 0) {
+      logger.warn('No functions found in ABI to analyze.');
+      return {};
+    }
+
+    const messages: ModelMessage[] = [
+      {
+        role: 'system',
+        content: FUNCTION_ANALYSIS_PROMPT,
+      },
+      {
+        role: 'user',
+        content: `Source Code:\\n\`\`\`solidity\\n${source}\\n\`\`\`\\n\\nABI:\\n\`\`\`json\\n${JSON.stringify(
+          abi, null, 2
+        )}\\n\`\`\`\\n\\nFunction Names to Analyze: ${functionNames.join(', ')}`,
+      },
+    ];
+
+    const response = await callLlm(
+      this.openRouterClient,
+      messages,
+      'function analysis'
+    );
+    if (!response) {
+      return { error: { description: 'LLM call failed' } } as any; // Return error marker
+    }
+
+    const parsedJson = extractAndParseJson<FunctionAnalyses>(
+      response,
+      'function analysis response'
+    );
+    if (!parsedJson) {
+      return { error: { description: 'Failed to parse LLM response' } } as any; // Return error marker
+    }
+
+    // Simple validation: Check if at least some expected keys exist
+    const receivedKeys = Object.keys(parsedJson);
+    if (receivedKeys.length === 0 && functionNames.length > 0) {
+      logger.warn('Parsed function analysis JSON is empty, but functions were expected.');
+      // Decide how to handle: return empty, error, or the empty object?
+      // Returning the empty object might be safest if frontend handles it.
+      return {};
+    }
+
+    logger.info(`Successfully generated analyses for ${receivedKeys.length} functions.`);
+    return parsedJson;
+  }
+
+  /**
+   * Generates the initial diagram data from the LLM.
+   * @param source Solidity source code
+   * @param abi Contract ABI
+   * @param functionAnalyses Previously generated function analyses (optional context)
+   * @returns Raw diagram output from LLM or null if failed.
+   */
+  private async generateInitialDiagramData(
+    source: string,
+    abi: any[],
+    functionAnalyses: FunctionAnalyses // Keep for potential future context use
+  ): Promise<RawDiagramOutput | null> {
+    logger.info('Preparing messages for LLM - initial diagram generation');
+
+    const functionNames = Object.keys(functionAnalyses); // Get names from successful analysis
+
+    const messages: ModelMessage[] = [
+      {
+        role: 'system',
+        content: DIAGRAM_GENERATION_PROMPT,
+      },
+      {
+        role: 'user',
+        content: `Analyze the following contract:\\n\\nSource Code:\\n\`\`\`solidity\\n${source}\\n\`\`\`\\n\\nABI:\\n\`\`\`json\\n${JSON.stringify(
+          abi, null, 2
+        )}\\n\`\`\`\\n\\nFunction Names List: ${functionNames.join(', ')}`,
+      },
+    ];
+
+    const response = await callLlm(
+      this.openRouterClient,
+      messages,
+      'initial diagram generation'
+    );
+    if (!response) {
+      return null;
+    }
+
+    const parsedJson = extractAndParseJson<RawDiagramOutput>(
+      response,
+      'initial diagram generation response'
+    );
+    return parsedJson;
+  }
+
+  /**
+   * Validates a single diagram item and attempts correction via LLM if invalid.
+   * @param diagramItem The diagram item (code + explanation) to validate.
+   * @param diagramName Name for logging (e.g., "general" or function name).
+   * @returns The validated DiagramItem or null if validation/correction fails.
+   */
+  private async validateAndCorrectDiagram(
+    diagramItem: DiagramItem | undefined | null,
+    diagramName: string
+  ): Promise<DiagramItem | null> {
+    if (!diagramItem || !diagramItem.mermaidCode) {
+      logger.warn(`Skipping validation for ${diagramName}: No code provided.`);
+      return null;
+    }
+
+    let currentCode = diagramItem.mermaidCode;
+    let attempts = 0;
+
+    while (attempts <= MAX_CORRECTION_RETRIES) {
+      const validationResult = await isValidMermaid(currentCode);
+
+      if (validationResult.valid) {
+        logger.info(`Mermaid validation successful for ${diagramName} (attempt ${attempts + 1}).`);
+        // Return the item with the validated (potentially corrected) code
+        return { mermaidCode: currentCode, explanation: diagramItem.explanation };
+      }
+
+      logger.warn(
+        `Mermaid validation failed for ${diagramName} (attempt ${attempts + 1}/${MAX_CORRECTION_RETRIES + 1}). Error: ${validationResult.error}`
+      );
+
+      if (attempts === MAX_CORRECTION_RETRIES) {
+        logger.error(
+          `Max correction retries reached for ${diagramName}. Discarding diagram.`
+        );
+        break; // Exit loop, will return null
+      }
+
+      // Attempt correction
+      attempts++;
+      logger.info(`Attempting LLM correction for ${diagramName} (attempt ${attempts}).`);
+
+      const correctionMessages: ModelMessage[] = [
+        {
+          role: 'system',
+          content: DIAGRAM_CORRECTION_PROMPT,
+        },
+        {
+          role: 'user',
+          content: `The following Mermaid code failed validation with the error:\\n\\nError Message: ${validationResult.error}\\n\\nOriginal Mermaid Code:\\n\`\`\`mermaid\\n${currentCode}\\n\`\`\`\\nPlease provide ONLY the corrected Mermaid code.`, // Ensure prompt asks only for code
+        },
+      ];
+
+      const correctionResponse = await callLlm(
+        this.openRouterClient,
+        correctionMessages,
+        `diagram correction for ${diagramName}`
+      );
+
+      if (correctionResponse) {
+        // LLM might return markdown, explanations etc. Try to extract just the code.
+        const correctedCodeMatch = correctionResponse.match(/```(?:mermaid)?\\n?([\\s\\S]*?)\\n?```/);
+        const potentialCode = correctedCodeMatch ? correctedCodeMatch[1].trim() : correctionResponse.trim();
+
+        if (potentialCode && potentialCode !== currentCode) {
+          logger.info(`Received corrected code for ${diagramName}. Retrying validation.`);
+          currentCode = potentialCode; // Use the potential fix for the next loop iteration
+          // Continue loop to re-validate
+        } else {
+          logger.warn(`LLM correction for ${diagramName} did not provide new code or was identical. Stopping correction attempts.`);
+          break; // Exit loop if no useful correction received
+        }
+      } else {
+        logger.error(
+          `LLM correction call failed for ${diagramName}. Stopping correction attempts.`
+        );
+        break; // Exit loop if LLM call fails
+      }
+    }
+
+    return null; // Return null if validation/correction ultimately failed
+  }
+
+  /**
+   * Generates and validates diagram data (general and function-specific).
+   * Fetches initial data, then validates/corrects each diagram individually.
+   * @param source Solidity source code
+   * @param abi Contract ABI
+   * @param functionAnalyses Analyses of functions (context)
+   * @returns Validated AnalysisResult object.
+   */
+  public async generateAndValidateDiagramData(
+    source: string,
+    abi: any[],
+    functionAnalyses: FunctionAnalyses
+  ): Promise<AnalysisResult> {
+    const rawOutput = await this.generateInitialDiagramData(
+      source,
+      abi,
+      functionAnalyses
+    );
+
+    if (!rawOutput) {
+      logger.error('Failed to generate initial diagram data from LLM.');
+      return { generalDiagram: null, functionDiagrams: {} };
+    }
+
+    const validatedResult: AnalysisResult = {
+      generalDiagram: null,
+      functionDiagrams: {},
+    };
+
+    // Validate/Correct General Diagram
+    logger.info('Validating general diagram...');
+    validatedResult.generalDiagram = await this.validateAndCorrectDiagram(
+      rawOutput.generalDiagram,
+      'general'
+    );
+
+    // Validate/Correct Function Diagrams
+    if (rawOutput.functionDiagrams) {
+      logger.info('Validating function diagrams...');
+      for (const funcName in rawOutput.functionDiagrams) {
+        if (Object.prototype.hasOwnProperty.call(rawOutput.functionDiagrams, funcName)) {
+          logger.debug(`Validating diagram for function: ${funcName}`);
+          const validatedFuncDiagram = await this.validateAndCorrectDiagram(
+            rawOutput.functionDiagrams[funcName],
+            funcName
+          );
+          if (validatedFuncDiagram) {
+            validatedResult.functionDiagrams[funcName] = validatedFuncDiagram;
+            logger.info(`Successfully validated/corrected diagram for ${funcName}.`);
+          }
+        }
+      }
+    } else {
+      logger.warn('No function diagrams found in the initial LLM output.');
+    }
+
+    return validatedResult;
   }
 }

@@ -45,4 +45,4 @@ npm run dev
 ```bash
 docker build -t solidity-compiler-api -f src/cmd/solidity-compiler-api/Dockerfile .
 # docker run -p 8080:8080 solidity-compiler-api
-``` 
+```

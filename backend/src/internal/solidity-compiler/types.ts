@@ -21,4 +21,5 @@ export interface CompilationOutput {
     edges: any[];
     explanation: string;
   };
+  flattenedSource?: string;
 }

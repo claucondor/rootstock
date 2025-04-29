@@ -65,7 +65,13 @@ declare module 'solc' {
     settings: any;
   }
 
-  function compile(input: string, readCallback?: (path: string) => { contents: string; error: string }): string;
+  function compile(
+    input: string,
+    readCallback?: (path: string) => { contents: string; error: string }
+  ): string;
   function setupMethods(soljson: any): any;
-  function loadRemoteVersion(version: string, callback: (err: Error | null, solc: any) => void): void;
+  function loadRemoteVersion(
+    version: string,
+    callback: (err: Error | null, solc: any) => void
+  ): void;
 }

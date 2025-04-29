@@ -23,6 +23,7 @@
     "solc": "^0.8.29"
   },
   "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.4.2",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
   }

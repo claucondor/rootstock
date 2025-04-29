@@ -16,7 +16,7 @@ export interface RefineContractRequest {
    * Source code of the existing contract
    */
   source: string;
-  
+
   /**
    * Instructions for modifying the contract
    */
@@ -31,7 +31,7 @@ export interface GenerateDocumentationRequest {
    * Source code of the contract
    */
   source: string;
-  
+
   /**
    * Contract ABI
    */
@@ -46,14 +46,14 @@ export interface GenerateDiagramRequest {
    * Source code of the contract
    */
   source: string;
-  
+
   /**
    * Contract ABI
    */
   abi: any;
-  
+
   /**
    * Function descriptions (optional)
    */
   functionDescriptions?: Record<string, string>;
-} 
+}

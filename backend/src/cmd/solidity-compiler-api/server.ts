@@ -17,14 +17,14 @@ export async function startServer() {
 
   // Use PORT environment variable provided by Cloud Run, or default to 8080
   const port = parseInt(process.env.PORT || '8080');
-  
+
   try {
     await fastify.listen({ port, host: '0.0.0.0' });
     fastify.log.info(`Server listening on port ${port}`);
-    
+
     // Handle graceful shutdown (important for Cloud Run)
     const signals = ['SIGTERM', 'SIGINT'];
-    signals.forEach(signal => {
+    signals.forEach((signal) => {
       process.on(signal, async () => {
         fastify.log.info(`Received ${signal}, shutting down gracefully`);
         await fastify.close();

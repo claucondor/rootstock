@@ -16,6 +16,7 @@ Esta API permite generar y refinar contratos inteligentes utilizando OpenZeppeli
 La especificación completa de la API está disponible en formato OpenAPI en el archivo [contract-generator-api.yaml](./contract-generator-api.yaml).
 
 Para visualizar la documentación de forma interactiva, puedes usar herramientas como:
+
 - [Swagger UI](https://swagger.io/tools/swagger-ui/)
 - [Redoc](https://redocly.github.io/redoc/)
 

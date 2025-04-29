@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowRight, Info, Loader2 } from 'lucide-react';
 import { Contract } from '@/hooks/use-contract-storage';
@@ -11,7 +17,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 
 interface ContractABIFunction {
@@ -33,9 +39,15 @@ interface ContractInteractionProps {
   deployedAddress?: string | null;
 }
 
-const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionProps) => {
-  const [selectedFunction, setSelectedFunction] = useState<ContractABIFunction | null>(null);
-  const [functionInputs, setFunctionInputs] = useState<Record<string, string>>({});
+const ContractInteraction = ({
+  contract,
+  deployedAddress,
+}: ContractInteractionProps) => {
+  const [selectedFunction, setSelectedFunction] =
+    useState<ContractABIFunction | null>(null);
+  const [functionInputs, setFunctionInputs] = useState<Record<string, string>>(
+    {}
+  );
   const [callResult, setCallResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -44,60 +56,54 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
   // tendrías que parsear el ABI del contrato correctamente
   const getFunctions = (): ContractABIFunction[] => {
     if (!contract) return [];
-    
+
     try {
       // Simplificado para el ejemplo - en una app real se parsearia el ABI correctamente
       return [
         {
-          name: "transfer",
-          type: "function",
+          name: 'transfer',
+          type: 'function',
           inputs: [
-            { name: "to", type: "address" },
-            { name: "amount", type: "uint256" }
+            { name: 'to', type: 'address' },
+            { name: 'amount', type: 'uint256' },
           ],
-          outputs: [
-            { name: "", type: "bool" }
-          ],
-          stateMutability: "nonpayable"
+          outputs: [{ name: '', type: 'bool' }],
+          stateMutability: 'nonpayable',
         },
         {
-          name: "balanceOf",
-          type: "function",
-          inputs: [
-            { name: "account", type: "address" }
-          ],
-          outputs: [
-            { name: "", type: "uint256" }
-          ],
-          stateMutability: "view"
+          name: 'balanceOf',
+          type: 'function',
+          inputs: [{ name: 'account', type: 'address' }],
+          outputs: [{ name: '', type: 'uint256' }],
+          stateMutability: 'view',
         },
         {
-          name: "mint",
-          type: "function",
+          name: 'mint',
+          type: 'function',
           inputs: [
-            { name: "to", type: "address" },
-            { name: "amount", type: "uint256" }
+            { name: 'to', type: 'address' },
+            { name: 'amount', type: 'uint256' },
           ],
           outputs: [],
-          stateMutability: "nonpayable"
+          stateMutability: 'nonpayable',
         },
         {
-          name: "pause",
-          type: "function",
+          name: 'pause',
+          type: 'function',
           inputs: [],
           outputs: [],
-          stateMutability: "nonpayable"
+          stateMutability: 'nonpayable',
         },
         {
-          name: "unpause",
-          type: "function",
+          name: 'unpause',
+          type: 'function',
           inputs: [],
           outputs: [],
-          stateMutability: "nonpayable"
-        }
+          stateMutability: 'nonpayable',
+        },
       ];
     } catch (error) {
-      console.error("Error parsing ABI:", error);
+      console.error('Error parsing ABI:', error);
       return [];
     }
   };
@@ -109,23 +115,23 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
   };
 
   const handleInputChange = (name: string, value: string) => {
-    setFunctionInputs(prevInputs => ({
+    setFunctionInputs((prevInputs) => ({
       ...prevInputs,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const callFunction = async () => {
     if (!selectedFunction || !deployedAddress) return;
-    
+
     setIsLoading(true);
     setCallResult(null);
-    
+
     try {
       // Simulación de llamada a la función - En una app real, esto sería una llamada usando Web3/ethers.js
       setTimeout(() => {
         let result;
-        
+
         // Simulación de diferentes resultados basados en el tipo de función
         if (selectedFunction.name === 'balanceOf') {
           result = '1000000000000000000'; // 1 token con 18 decimales
@@ -135,21 +141,21 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
           // Para funciones que modifican el estado, simular un hash de tx
           result = '0x' + Math.random().toString(16).slice(2, 66);
         }
-        
+
         setCallResult(result);
-        
+
         toast({
-          title: "Función ejecutada correctamente",
+          title: 'Función ejecutada correctamente',
           description: `La función ${selectedFunction.name} ha sido ejecutada correctamente`,
         });
-        
+
         setIsLoading(false);
       }, 2000);
     } catch (error) {
       toast({
-        title: "Error",
+        title: 'Error',
         description: `Error al ejecutar la función ${selectedFunction.name}`,
-        variant: "destructive",
+        variant: 'destructive',
       });
       setIsLoading(false);
     }
@@ -157,19 +163,19 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
 
   const getFunctionDescription = (funcName: string): string => {
     const descriptions: Record<string, string> = {
-      transfer: "Transfiere tokens al destinatario especificado",
-      balanceOf: "Verifica el saldo de tokens de una dirección",
-      mint: "Crea nuevos tokens y los asigna a una dirección (solo owner)",
-      pause: "Pausa todas las transferencias de tokens (solo owner)",
-      unpause: "Reanuda las transferencias de tokens (solo owner)"
+      transfer: 'Transfiere tokens al destinatario especificado',
+      balanceOf: 'Verifica el saldo de tokens de una dirección',
+      mint: 'Crea nuevos tokens y los asigna a una dirección (solo owner)',
+      pause: 'Pausa todas las transferencias de tokens (solo owner)',
+      unpause: 'Reanuda las transferencias de tokens (solo owner)',
     };
-    
-    return descriptions[funcName] || "No hay descripción disponible";
+
+    return descriptions[funcName] || 'No hay descripción disponible';
   };
 
   const formatStateMutability = (stateMutability: string): JSX.Element => {
     let color = '';
-    
+
     switch (stateMutability) {
       case 'view':
         color = 'bg-blue-600';
@@ -186,7 +192,7 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
       default:
         color = 'bg-gray-600';
     }
-    
+
     return <Badge className={color}>{stateMutability}</Badge>;
   };
 
@@ -201,39 +207,54 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
   if (!deployedAddress) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-400">Primero debes desplegar el contrato para poder interactuar con él</p>
+        <p className="text-gray-400">
+          Primero debes desplegar el contrato para poder interactuar con él
+        </p>
       </div>
     );
   }
 
   const functions = getFunctions();
-  const viewFunctions = functions.filter(f => f.stateMutability === 'view' || f.stateMutability === 'pure');
-  const writeFunctions = functions.filter(f => f.stateMutability !== 'view' && f.stateMutability !== 'pure');
+  const viewFunctions = functions.filter(
+    (f) => f.stateMutability === 'view' || f.stateMutability === 'pure'
+  );
+  const writeFunctions = functions.filter(
+    (f) => f.stateMutability !== 'view' && f.stateMutability !== 'pure'
+  );
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-white">Interactuar con el Contrato</h2>
+      <h2 className="text-2xl font-bold text-white">
+        Interactuar con el Contrato
+      </h2>
       <p className="text-gray-400 mb-6">
-        Dirección: <span className="font-mono text-green-400">{deployedAddress}</span>
+        Dirección:{' '}
+        <span className="font-mono text-green-400">{deployedAddress}</span>
       </p>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6">
         <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-          <h3 className="text-lg font-semibold text-white mb-4">Funciones del Contrato</h3>
-          
+          <h3 className="text-lg font-semibold text-white mb-4">
+            Funciones del Contrato
+          </h3>
+
           <Tabs defaultValue="read">
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="read">Lectura</TabsTrigger>
               <TabsTrigger value="write">Escritura</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="read" className="mt-0">
               <div className="space-y-2">
                 {viewFunctions.length > 0 ? (
                   viewFunctions.map((func) => (
                     <Button
                       key={func.name}
-                      variant={selectedFunction?.name === func.name ? "default" : "outline"}
+                      variant={
+                        selectedFunction?.name === func.name
+                          ? 'default'
+                          : 'outline'
+                      }
                       onClick={() => handleFunctionSelect(func)}
                       className="w-full justify-start"
                     >
@@ -241,18 +262,24 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
                     </Button>
                   ))
                 ) : (
-                  <p className="text-gray-400 text-sm">No hay funciones de lectura</p>
+                  <p className="text-gray-400 text-sm">
+                    No hay funciones de lectura
+                  </p>
                 )}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="write" className="mt-0">
               <div className="space-y-2">
                 {writeFunctions.length > 0 ? (
                   writeFunctions.map((func) => (
                     <Button
                       key={func.name}
-                      variant={selectedFunction?.name === func.name ? "default" : "outline"}
+                      variant={
+                        selectedFunction?.name === func.name
+                          ? 'default'
+                          : 'outline'
+                      }
                       onClick={() => handleFunctionSelect(func)}
                       className="w-full justify-start"
                     >
@@ -260,13 +287,15 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
                     </Button>
                   ))
                 ) : (
-                  <p className="text-gray-400 text-sm">No hay funciones de escritura</p>
+                  <p className="text-gray-400 text-sm">
+                    No hay funciones de escritura
+                  </p>
                 )}
               </div>
             </TabsContent>
           </Tabs>
         </div>
-        
+
         <div>
           {selectedFunction ? (
             <Card className="bg-gray-800 border-gray-700">
@@ -281,7 +310,11 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                        >
                           <Info className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
@@ -298,29 +331,31 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
               <CardContent>
                 {selectedFunction.inputs.length > 0 && (
                   <div className="space-y-4 mb-6">
-                    <h4 className="text-sm font-medium text-gray-300">Parámetros</h4>
+                    <h4 className="text-sm font-medium text-gray-300">
+                      Parámetros
+                    </h4>
                     {selectedFunction.inputs.map((input, idx) => (
                       <div key={idx} className="space-y-2">
                         <label className="text-sm text-gray-400">
-                          {input.name} <span className="text-gray-500">({input.type})</span>
+                          {input.name}{' '}
+                          <span className="text-gray-500">({input.type})</span>
                         </label>
                         <Input
                           type="text"
                           placeholder={`Ingrese ${input.name || input.type}`}
                           value={functionInputs[input.name] || ''}
-                          onChange={(e) => handleInputChange(input.name, e.target.value)}
+                          onChange={(e) =>
+                            handleInputChange(input.name, e.target.value)
+                          }
                           className="bg-gray-900 border-gray-700"
                         />
                       </div>
                     ))}
                   </div>
                 )}
-                
+
                 <div className="flex justify-end">
-                  <Button 
-                    onClick={callFunction} 
-                    disabled={isLoading}
-                  >
+                  <Button onClick={callFunction} disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -334,10 +369,12 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
                     )}
                   </Button>
                 </div>
-                
+
                 {callResult && (
                   <div className="mt-6 p-4 bg-gray-900 rounded-md">
-                    <h4 className="text-sm font-medium text-gray-300 mb-2">Resultado</h4>
+                    <h4 className="text-sm font-medium text-gray-300 mb-2">
+                      Resultado
+                    </h4>
                     <div className="font-mono text-sm bg-gray-950 p-3 rounded overflow-x-auto">
                       <pre className="text-green-400">{callResult}</pre>
                     </div>
@@ -347,7 +384,9 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
             </Card>
           ) : (
             <div className="h-full flex items-center justify-center bg-gray-800 rounded-lg p-8 border border-gray-700">
-              <p className="text-gray-400">Selecciona una función para interactuar con el contrato</p>
+              <p className="text-gray-400">
+                Selecciona una función para interactuar con el contrato
+              </p>
             </div>
           )}
         </div>
@@ -356,4 +395,4 @@ const ContractInteraction = ({ contract, deployedAddress }: ContractInteractionP
   );
 };
 
-export default ContractInteraction; 
+export default ContractInteraction;

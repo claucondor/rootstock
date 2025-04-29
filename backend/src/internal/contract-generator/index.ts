@@ -35,7 +35,10 @@ export class ContractGeneratorService {
    * @param prompt Instrucciones para modificar el contrato
    * @returns Objeto con el código del contrato refinado, ABI y bytecode
    */
-  async refineContract(sourceCode: string, prompt: string): Promise<GeneratedContract> {
+  async refineContract(
+    sourceCode: string,
+    prompt: string
+  ): Promise<GeneratedContract> {
     return this.generator.refineContract(sourceCode, prompt);
   }
 }

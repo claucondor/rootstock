@@ -9,7 +9,7 @@ export function cleanup(contractPath: string): void {
     if (fs.existsSync(contractPath)) {
       fs.unlinkSync(contractPath);
     }
-    
+
     // Also clean up the flattened file if it exists
     const flattenedPath = contractPath.replace('.sol', '.flattened.sol');
     if (fs.existsSync(flattenedPath)) {

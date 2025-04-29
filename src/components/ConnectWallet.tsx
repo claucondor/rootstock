@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Wallet } from 'lucide-react';
@@ -16,9 +15,9 @@ export const ConnectWallet = ({ onConnected }: ConnectWalletProps) => {
   const connectWallet = async () => {
     if (typeof window.ethereum === 'undefined') {
       toast({
-        title: "MetaMask no detectado",
-        description: "Por favor instala MetaMask para continuar",
-        variant: "destructive"
+        title: 'MetaMask no detectado',
+        description: 'Por favor instala MetaMask para continuar',
+        variant: 'destructive',
       });
       return;
     }
@@ -28,18 +27,18 @@ export const ConnectWallet = ({ onConnected }: ConnectWalletProps) => {
       await window.ethereum.request({ method: 'eth_requestAccounts' });
       setIsConnected(true);
       toast({
-        title: "Wallet conectada",
-        description: "Tu wallet ha sido conectada exitosamente"
+        title: 'Wallet conectada',
+        description: 'Tu wallet ha sido conectada exitosamente',
       });
-      
+
       if (onConnected) {
         onConnected();
       }
     } catch (error) {
       toast({
-        title: "Error al conectar",
-        description: "Hubo un error al conectar tu wallet",
-        variant: "destructive"
+        title: 'Error al conectar',
+        description: 'Hubo un error al conectar tu wallet',
+        variant: 'destructive',
       });
     } finally {
       setIsConnecting(false);
@@ -47,14 +46,18 @@ export const ConnectWallet = ({ onConnected }: ConnectWalletProps) => {
   };
 
   return (
-    <Button 
-      onClick={connectWallet} 
+    <Button
+      onClick={connectWallet}
       disabled={isConnecting || isConnected}
       variant="outline"
       className="bg-rootstock-primary text-white hover:bg-rootstock-primary/90"
     >
       <Wallet className="mr-2 h-4 w-4" />
-      {isConnected ? 'Conectado' : isConnecting ? 'Conectando...' : 'Conectar Wallet'}
+      {isConnected
+        ? 'Conectado'
+        : isConnecting
+          ? 'Conectando...'
+          : 'Conectar Wallet'}
     </Button>
   );
 };
