@@ -21,7 +21,15 @@ const ContractGenerator = () => {
   const { contracts, getContract, deleteContract } = useContractStorage();
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
   const [deployedAddress, setDeployedAddress] = useState<string | null>(null);
+  const [loadingDocumentation, setLoadingDocumentation] = useState(false);
+  const [loadingDiagram, setLoadingDiagram] = useState(false);
   const selectedContract = selectedContractId ? getContract(selectedContractId) : null;
+
+  // Handle loading states from ChatInterface component
+  const handleLoadingStates = (docLoading: boolean, diagramLoading: boolean) => {
+    setLoadingDocumentation(docLoading);
+    setLoadingDiagram(diagramLoading);
+  };
 
   const handleViewContract = (contractId: string) => {
     setSelectedContractId(contractId);
@@ -110,7 +118,7 @@ const ContractGenerator = () => {
             transition={{ duration: 0.3 }}
             className="bg-gray-900 rounded-lg p-6"
           >
-            <DiagramView contract={selectedContract} />
+            <DiagramView contract={selectedContract} isLoading={loadingDiagram} />
           </motion.div>
         );
       case 'documentation':
@@ -122,7 +130,7 @@ const ContractGenerator = () => {
             transition={{ duration: 0.3 }}
             className="bg-gray-900 rounded-lg p-6"
           >
-            <FunctionDocumentation contract={selectedContract} />
+            <FunctionDocumentation contract={selectedContract} isLoading={loadingDocumentation} />
           </motion.div>
         );
       case 'deploy':
@@ -197,7 +205,7 @@ const ContractGenerator = () => {
           <div className="space-y-6">
             {/* Chat Interface */}
             <AnimatedCard className="overflow-hidden p-0" delay={0.1}>
-              <ChatInterface />
+              <ChatInterface onLoadingStateChange={handleLoadingStates} />
             </AnimatedCard>
             
             {/* Contract History */}

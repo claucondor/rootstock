@@ -1,22 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls, 
   Background,
   Node,
   Edge,
-  Panel
+  Panel,
+  ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Contract } from '@/hooks/use-contract-storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, ZoomIn, ZoomOut, Maximize2, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp, ZoomIn, ZoomOut, Maximize2, Download, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface DiagramViewProps {
   contract: Contract | null;
   className?: string;
+  isLoading?: boolean;
 }
 
 // Tipo para los datos del diagrama que vienen de la API
@@ -62,24 +64,48 @@ const nodeTypes = {
   custom: CustomNode,
 };
 
-const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
+const DiagramView = ({ contract, className = '', isLoading = false }: DiagramViewProps) => {
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('structure');
   const [diagramData, setDiagramData] = useState<DiagramData | null>(null);
   const [diagramExplanation, setDiagramExplanation] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const flowContainerRef = useRef<HTMLDivElement>(null);
   
   // Efecto para procesar los datos del análisis cuando cambia el contrato
   useEffect(() => {
     if (contract?.analysis) {
       try {
+        console.log("Procesando análisis del contrato para diagrama:", contract.analysis);
         const analysisData = JSON.parse(contract.analysis);
         
-        if (analysisData.diagramData) {
-          setDiagramData(analysisData.diagramData);
+        // Primero intentamos obtener diagramData como propiedad directa
+        let extractedDiagramData = analysisData.diagramData;
+        
+        // Si no está como propiedad directa, podría estar anidado dentro del análisis
+        if (!extractedDiagramData && analysisData.analysis && typeof analysisData.analysis === 'object') {
+          extractedDiagramData = analysisData.analysis.diagramData;
+        }
+        
+        // Si todavía no tenemos diagramData, podría estar en el nivel superior
+        if (!extractedDiagramData && Array.isArray(analysisData.nodes) && Array.isArray(analysisData.edges)) {
+          extractedDiagramData = analysisData;
+        }
+        
+        // Verificar si los datos están directamente en la respuesta (como se ve en la consola)
+        if (!extractedDiagramData && analysisData.attempts && analysisData.diagramData) {
+          extractedDiagramData = analysisData.diagramData;
+        }
+        
+        if (extractedDiagramData) {
+          console.log("Datos de diagrama encontrados:", extractedDiagramData);
+          setDiagramData(extractedDiagramData);
           
-          if (analysisData.diagramData.explanation) {
-            setDiagramExplanation(analysisData.diagramData.explanation);
+          if (extractedDiagramData.explanation) {
+            setDiagramExplanation(extractedDiagramData.explanation);
           }
+        } else {
+          console.log("No se encontraron datos de diagrama en el análisis");
         }
       } catch (error) {
         console.error("Error al procesar los datos del diagrama:", error);
@@ -91,17 +117,34 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
     }
   }, [contract]);
   
+  // Efecto para asegurar que el contenedor está listo antes de renderizar ReactFlow
+  useEffect(() => {
+    if (flowContainerRef.current) {
+      const resizeObserver = new ResizeObserver(() => {
+        setInitialized(true);
+      });
+      
+      resizeObserver.observe(flowContainerRef.current);
+      
+      return () => {
+        if (flowContainerRef.current) {
+          resizeObserver.unobserve(flowContainerRef.current);
+        }
+      };
+    }
+  }, []);
+  
   // Función para generar los nodos basados en el contrato
   const generateNodes = (): Node<NodeData>[] => {
     // Si tenemos datos del diagrama de la API, usarlos
     if (diagramData?.nodes && diagramData.nodes.length > 0) {
       return diagramData.nodes.map(node => ({
         ...node,
-        id: node.id,
+        id: node.id || `node-${Math.random().toString(36).substr(2, 9)}`,
         type: 'custom',
         position: node.position || { x: 0, y: 0 },
         data: {
-          title: node.data?.label || node.data?.title || node.id,
+          title: node.data?.label || node.data?.title || node.label || node.id || 'Node',
           subtitle: node.data?.subtitle,
           content: node.data?.content,
           bgColor: node.data?.bgColor || 'bg-gray-800'
@@ -178,28 +221,10 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
     
     // En caso contrario, usar el diagrama por defecto
     return [
-      // Conexiones de herencia
-      { id: 'e-contract-erc20', source: 'contract', target: 'erc20', animated: true },
-      { id: 'e-contract-burnable', source: 'contract', target: 'burnable', animated: true },
-      { id: 'e-contract-pausable', source: 'contract', target: 'pausable', animated: true },
-      
-      // Conexiones de variables
-      { id: 'e-state-vars-name', source: 'state-vars', target: 'name' },
-      { id: 'e-state-vars-symbol', source: 'state-vars', target: 'symbol' },
-      { id: 'e-state-vars-owner', source: 'state-vars', target: 'owner' },
-      
-      // Conexiones de funciones
-      { id: 'e-functions-transfer', source: 'functions', target: 'transfer' },
-      { id: 'e-functions-mint', source: 'functions', target: 'mint' },
-      { id: 'e-functions-pause', source: 'functions', target: 'pause' },
-      
-      // Conexiones de eventos
-      { id: 'e-events-transfer', source: 'events', target: 'transfer-event' },
-      { id: 'e-events-approval', source: 'events', target: 'approval-event' },
-      
-      // Conexiones funcionales
-      { id: 'e-transfer-event', source: 'transfer', target: 'transfer-event', type: 'step', style: { stroke: '#666' } },
-      { id: 'e-mint-transfer', source: 'mint', target: 'transfer-event', type: 'step', style: { stroke: '#666' } },
+      // Conexiones desde el contrato a las secciones principales
+      { id: 'e-contract-state', source: 'contract', target: 'state-vars', animated: true },
+      { id: 'e-contract-functions', source: 'contract', target: 'functions', animated: true },
+      { id: 'e-contract-events', source: 'contract', target: 'events', animated: true },
     ];
   };
 
@@ -210,12 +235,12 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
       return {
         nodes: diagramData.flowData.nodes.map(node => ({
           ...node,
-          id: node.id,
+          id: node.id || `flow-${Math.random().toString(36).substr(2, 9)}`,
           type: 'custom',
           position: node.position || { x: 0, y: 0 },
           data: {
             ...node.data,
-            title: node.data?.label || node.data?.title || node.id,
+            title: node.data?.label || node.data?.title || node.id || 'Flow Node',
           }
         })),
         edges: diagramData.flowData.edges.map(edge => ({
@@ -251,32 +276,50 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
         {
           id: 'transfer',
           type: 'custom',
-          position: { x: 250, y: 250 },
+          position: { x: 400, y: 250 },
           data: { 
-            title: 'Transfer',
-            bgColor: 'bg-green-900'
+            title: 'Transfer Tokens',
+            bgColor: 'bg-blue-800'
           }
         },
         {
           id: 'burn',
           type: 'custom',
-          position: { x: 550, y: 250 },
+          position: { x: 400, y: 350 },
           data: { 
-            title: 'Burn',
+            title: 'Burn Tokens',
             bgColor: 'bg-red-900'
           }
         }
       ],
       edges: [
-        { id: 'e-deploy-mint', source: 'deploy', target: 'mint', animated: true },
+        { id: 'e-deploy-mint', source: 'deploy', target: 'mint' },
         { id: 'e-mint-transfer', source: 'mint', target: 'transfer' },
-        { id: 'e-mint-burn', source: 'mint', target: 'burn' }
+        { id: 'e-transfer-burn', source: 'transfer', target: 'burn' }
       ]
     };
   };
-
-  const flowDiagram = generateFlowChart();
-
+  
+  // Obtener los nodos activos según la pestaña actual
+  const getActiveNodes = () => {
+    return activeTab === 'flow' ? generateFlowChart().nodes : generateNodes();
+  };
+  
+  // Obtener las aristas activas según la pestaña actual
+  const getActiveEdges = () => {
+    return activeTab === 'flow' ? generateFlowChart().edges : generateEdges();
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-6" />
+        <h3 className="text-xl font-bold text-white mb-2">Generando diagrama...</h3>
+        <p className="text-gray-400">Analizando el contrato para crear una visualización clara de su estructura.</p>
+      </div>
+    );
+  }
+  
   if (!contract) {
     return (
       <div className="text-center py-12">
@@ -285,82 +328,147 @@ const DiagramView = ({ contract, className = '' }: DiagramViewProps) => {
     );
   }
 
-  const structureDiagram = { nodes: generateNodes(), edges: generateEdges() };
-
-  const getActiveNodes = () => {
-    return activeTab === 'structure' ? structureDiagram.nodes : flowDiagram.nodes;
-  };
-
-  const getActiveEdges = () => {
-    return activeTab === 'structure' ? structureDiagram.edges : flowDiagram.edges;
-  };
-
   return (
-    <div className={`relative ${className}`}>
-      <div 
-        className={`transition-all duration-300 ${expanded ? 'h-[700px]' : 'h-[500px]'}`}
-        style={{ width: '100%' }}
-      >
-        <Tabs defaultValue="structure" className="h-full flex flex-col" onValueChange={setActiveTab}>
-          <div className="flex items-center justify-between px-2">
-            <TabsList>
-              <TabsTrigger value="structure">Structure</TabsTrigger>
-              <TabsTrigger value="flow">Flow</TabsTrigger>
-            </TabsList>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={() => setExpanded(!expanded)}>
-                {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-            </div>
-          </div>
-
-          <TabsContent 
-            value="structure" 
-            className="h-full flex-grow overflow-hidden m-0 p-0"
-            style={{ minHeight: '400px' }}
+    <div className={`${className}`}>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-xl font-bold text-white">Visualización del Contrato</h3>
+          <p className="text-gray-400 text-sm mt-1">
+            {diagramExplanation || "Representación visual de la estructura y componentes del contrato inteligente."}
+          </p>
+        </div>
+        <div className="flex items-center space-x-1">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="border-gray-700 hover:bg-gray-800 focus:bg-gray-800"
+            onClick={() => setExpanded(!expanded)}
           >
-            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            <span className="ml-1">{expanded ? "Reducir" : "Expandir"}</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="border-gray-700 hover:bg-gray-800 focus:bg-gray-800"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      
+      <Tabs defaultValue="structure" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-gray-800 border-gray-700 p-1">
+          <TabsTrigger 
+            value="structure" 
+            className="data-[state=active]:bg-gray-700"
+          >
+            Estructura
+          </TabsTrigger>
+          <TabsTrigger 
+            value="flow" 
+            className="data-[state=active]:bg-gray-700"
+          >
+            Flujo
+          </TabsTrigger>
+        </TabsList>
+        
+        <div 
+          ref={flowContainerRef}
+          className={`bg-gray-850 border border-gray-700 rounded-b-lg ${
+            expanded ? 'h-[800px]' : 'h-[500px]'
+          }`}
+          style={{ width: '100%', height: expanded ? '800px' : '500px' }}
+        >
+          <ReactFlowProvider>
+            {initialized && (
               <ReactFlow
                 nodes={getActiveNodes()}
                 edges={getActiveEdges()}
                 nodeTypes={nodeTypes}
                 fitView
-                className="bg-background"
+                attributionPosition="bottom-right"
+                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
               >
                 <Controls />
-                <MiniMap />
-                <Background />
+                <MiniMap 
+                  style={{ background: '#1f2937' }}
+                  nodeStrokeColor={(n) => '#fff'}
+                  nodeColor={(n) => {
+                    if (n.data?.bgColor) {
+                      // Extrae el color de la clase bgColor (por ejemplo, de 'bg-blue-900' extrae 'blue-900')
+                      const match = n.data.bgColor.match(/bg-([a-z]+-[0-9]+)/);
+                      if (match) {
+                        const colorName = match[1];
+                        // Mapeo simple de colores de Tailwind a hex
+                        const colorMap: Record<string, string> = {
+                          'blue-900': '#1e3a8a',
+                          'blue-800': '#1e40af',
+                          'green-900': '#14532d',
+                          'red-900': '#7f1d1d',
+                          'gray-800': '#1f2937',
+                          'purple-900': '#581c87'
+                        };
+                        return colorMap[colorName] || '#1f2937';
+                      }
+                    }
+                    return '#1f2937';
+                  }}
+                  maskColor="#1f2937a0"
+                />
+                <Background color="#aaa" gap={16} />
+                
+                <Panel position="top-right">
+                  <div className="flex bg-gray-800 rounded-md border border-gray-700 shadow-md">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-gray-300 hover:text-white"
+                    >
+                      <ZoomIn className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-gray-300 hover:text-white"
+                    >
+                      <ZoomOut className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-gray-300 hover:text-white"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </Panel>
               </ReactFlow>
-            </div>
-          </TabsContent>
-
-          <TabsContent 
-            value="flow" 
-            className="h-full flex-grow overflow-hidden m-0 p-0"
-            style={{ minHeight: '400px' }}
-          >
-            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-              <ReactFlow
-                nodes={diagramData?.flowData?.nodes || []}
-                edges={diagramData?.flowData?.edges || []}
-                nodeTypes={nodeTypes}
-                fitView
-                className="bg-background"
-              >
-                <Controls />
-                <MiniMap />
-                <Background />
-              </ReactFlow>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {diagramExplanation && (
-        <div className="mt-4 text-sm text-muted-foreground">
-          <p>{diagramExplanation}</p>
+            )}
+          </ReactFlowProvider>
         </div>
-      )}
+      </Tabs>
+      
+      <div className="mt-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-400">
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-blue-900 rounded-full mr-2"></div>
+            <span>Contrato Principal</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-green-900 rounded-full mr-2"></div>
+            <span>Funciones de Creación</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-blue-800 rounded-full mr-2"></div>
+            <span>Funciones de Transferencia</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-red-900 rounded-full mr-2"></div>
+            <span>Funciones de Quemado</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

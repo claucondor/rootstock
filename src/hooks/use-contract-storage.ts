@@ -23,21 +23,18 @@ export interface UseContractStorageReturnType {
 const STORAGE_KEY = 'rootstock_contracts';
 
 const useContractStorage = (): UseContractStorageReturnType => {
-  const [contracts, setContracts] = useState<Contract[]>([]);
-
-  // Load contracts from localStorage on mount
-  useEffect(() => {
+  const [contracts, setContracts] = useState<Contract[]>(() => {
     try {
       const storedContracts = localStorage.getItem(STORAGE_KEY);
       if (storedContracts) {
-        setContracts(JSON.parse(storedContracts));
+        return JSON.parse(storedContracts);
       }
     } catch (error) {
       console.error('Error loading contracts from localStorage:', error);
     }
-  }, []);
+    return [];
+  });
 
-  // Save contracts to localStorage whenever they change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(contracts));

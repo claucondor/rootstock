@@ -4,6 +4,7 @@ import { COMBINED_CONTEXT, COMBINED_REFINE_CONTEXT } from './templates';
 import { GeneratedContract } from './types';
 import { CompilationError } from '../solidity-compiler/types';
 import pino from 'pino';
+import { extractContractName } from '../solidity-compiler/compiler';
 
 const logger = pino();
 
@@ -33,6 +34,7 @@ export class ContractGenerator {
     let sourceCode = '';
     let attempt = 0;
     let lastErrors: CompilationError[] = [];
+    let contractName: string | undefined;
     
     logger.info({ prompt }, 'Starting contract generation');
     
@@ -53,6 +55,10 @@ export class ContractGenerator {
           // Extract only the contract code (remove markdown if present)
           sourceCode = response.replace(/```(solidity)?|```/g, '').trim();
           logger.info({ sourceLength: sourceCode.length }, 'Initial code generated');
+          
+          // Extract contract name from the clean source code
+          contractName = extractContractName(sourceCode);
+          logger.info({ contractName }, 'Contract name extracted from initial code');
         } else {
           logger.info({ 
             errorCount: lastErrors.length,
@@ -64,7 +70,7 @@ export class ContractGenerator {
         
         // Compile the generated contract
         logger.info('Compiling contract...');
-        const compilationResult = await this.compiler.compileSolidity(sourceCode);
+        const compilationResult = await this.compiler.compileSolidity(sourceCode, contractName);
         
         // If no errors, return the successful result
         if (!compilationResult.errors || compilationResult.errors.length === 0) {
@@ -159,6 +165,10 @@ export class ContractGenerator {
     let lastErrors: CompilationError[] = [];
     let refinedCode = sourceCode;
     
+    // Extract the contract name from the original source
+    let contractName = extractContractName(sourceCode);
+    logger.info({ contractName }, 'Contract name extracted from original source');
+    
     logger.info({ 
       sourceLength: sourceCode.length,
       prompt 
@@ -192,6 +202,13 @@ ${prompt}`;
           // Extract only the contract code (remove markdown if present)
           refinedCode = response.replace(/```(solidity)?|```/g, '').trim();
           logger.info({ refinedLength: refinedCode.length }, 'Refined code generated');
+          
+          // Re-extract the contract name in case it changed
+          const refinedContractName = extractContractName(refinedCode);
+          if (refinedContractName !== 'TempContract') {
+            contractName = refinedContractName;
+            logger.info({ contractName: refinedContractName }, 'Updated contract name from refined code');
+          }
         } else {
           logger.info({ 
             errorCount: lastErrors.length,
@@ -203,7 +220,7 @@ ${prompt}`;
         
         // Compile the refined contract
         logger.info('Compiling refined contract...');
-        const compilationResult = await this.compiler.compileSolidity(refinedCode);
+        const compilationResult = await this.compiler.compileSolidity(refinedCode, contractName);
         
         // If no errors, return the successful result
         if (!compilationResult.errors || compilationResult.errors.length === 0) {
@@ -327,6 +344,8 @@ Respond ONLY with the corrected contract code, without additional explanations.`
     ]);
     
     // Extract the corrected code
-    return response.replace(/```(solidity)?|```/g, '').trim();
+    const correctedCode = response.replace(/```(solidity)?|```/g, '').trim();
+    
+    return correctedCode;
   }
 }

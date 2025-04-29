@@ -1,18 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls, 
   Background,
   Node,
-  Edge
+  Edge,
+  ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { Loader2 } from 'lucide-react';
 
 interface ContractVisualizerProps {
   contractData?: {
     sourceCode?: string;
     analysis?: string;
   };
+  isLoading?: boolean;
 }
 
 // Tipo para los datos del diagrama que vienen de la API
@@ -22,7 +25,7 @@ interface DiagramData {
   explanation?: string;
 }
 
-const ContractVisualizer = ({ contractData = {} }: ContractVisualizerProps) => {
+const ContractVisualizer = ({ contractData = {}, isLoading = false }: ContractVisualizerProps) => {
   const initialNodes: Node[] = [
     {
       id: '1',
@@ -113,31 +116,67 @@ const ContractVisualizer = ({ contractData = {} }: ContractVisualizerProps) => {
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
   const [diagramExplanation, setDiagramExplanation] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const flowContainerRef = useRef<HTMLDivElement>(null);
+
+  // Efecto para asegurar que el contenedor está listo antes de renderizar ReactFlow
+  useEffect(() => {
+    if (flowContainerRef.current) {
+      const resizeObserver = new ResizeObserver(() => {
+        setInitialized(true);
+      });
+      
+      resizeObserver.observe(flowContainerRef.current);
+      
+      return () => {
+        if (flowContainerRef.current) {
+          resizeObserver.unobserve(flowContainerRef.current);
+        }
+      };
+    }
+  }, []);
 
   useEffect(() => {
     // Si tenemos datos de análisis, intentamos extraer los datos del diagrama
     if (contractData.analysis) {
       try {
         const analysisData = JSON.parse(contractData.analysis);
+        console.log("Datos de análisis procesados:", analysisData);
         
-        if (analysisData.diagramData) {
-          const diagramData = analysisData.diagramData as DiagramData;
+        // Primero intentamos obtener diagramData como propiedad directa
+        let diagramData = analysisData.diagramData as DiagramData | undefined;
+        
+        // Si no está como propiedad directa, podría estar en el análisis mismo
+        if (!diagramData && Array.isArray(analysisData.nodes) && Array.isArray(analysisData.edges)) {
+          diagramData = analysisData as DiagramData;
+        }
+        
+        // Verificar si los datos están directamente en la respuesta (como se ve en la consola)
+        if (!diagramData && analysisData.attempts && analysisData.diagramData) {
+          diagramData = analysisData.diagramData as DiagramData;
+        }
+        
+        if (diagramData) {
+          console.log("Datos de diagrama encontrados:", diagramData);
           
           // Convertir los nodos de la API al formato esperado por ReactFlow
-          if (diagramData.nodes && diagramData.nodes.length > 0) {
+          if (Array.isArray(diagramData.nodes) && diagramData.nodes.length > 0) {
             const apiNodes = diagramData.nodes.map(node => ({
               ...node,
               // Asegurarnos de que los nodos tienen los campos necesarios
-              id: node.id,
-              data: node.data || { label: node.label || node.id },
+              id: node.id || `node-${Math.random().toString(36).substr(2, 9)}`,
+              data: node.data || { label: node.label || node.id || 'Node' },
               position: node.position || { x: 0, y: 0 },
               style: node.style || {}
             }));
+            console.log("Nodos procesados:", apiNodes);
             setNodes(apiNodes);
+          } else {
+            console.log("No se encontraron nodos en el diagrama");
           }
           
           // Convertir las aristas de la API al formato esperado por ReactFlow
-          if (diagramData.edges && diagramData.edges.length > 0) {
+          if (Array.isArray(diagramData.edges) && diagramData.edges.length > 0) {
             const apiEdges = diagramData.edges.map(edge => ({
               ...edge,
               // Asegurarnos de que las aristas tienen los campos necesarios
@@ -146,21 +185,27 @@ const ContractVisualizer = ({ contractData = {} }: ContractVisualizerProps) => {
               target: edge.target,
               animated: edge.animated || false
             }));
+            console.log("Aristas procesadas:", apiEdges);
             setEdges(apiEdges);
+          } else {
+            console.log("No se encontraron aristas en el diagrama");
           }
           
           // Guardar la explicación del diagrama si existe
           if (diagramData.explanation) {
             setDiagramExplanation(diagramData.explanation);
           }
+        } else {
+          console.log("No se encontraron datos de diagrama en el análisis");
         }
       } catch (error) {
         console.error("Error al procesar los datos del diagrama:", error);
       }
     } else if (contractData.sourceCode) {
-      // Si no tenemos datos de análisis pero sí el código fuente, podríamos
-      // generar un diagrama básico en el cliente (aunque no lo implementaremos por ahora)
-      console.log('Código del contrato recibido, pero sin datos de diagrama');
+      // Si no tenemos datos de análisis pero sí el código fuente, usamos el diagrama por defecto
+      console.log('Código del contrato recibido, utilizando diagrama por defecto');
+      setNodes(initialNodes);
+      setEdges(initialEdges);
     }
   }, [contractData.analysis, contractData.sourceCode]);
 
@@ -176,32 +221,54 @@ const ContractVisualizer = ({ contractData = {} }: ContractVisualizerProps) => {
         )}
       </div>
 
-      <div style={{ width: '100%', height: '600px' }} className="rounded-lg overflow-hidden border border-gray-800">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          fitView
-        >
-          <Controls />
-          <MiniMap
-            nodeStrokeColor={(n) => '#fff'}
-            nodeColor={(n) => {
-              switch (n.style?.background) {
-                case '#5c67e3': return '#5c67e3';
-                case '#38a169': return '#38a169';
-                case '#e53e3e': return '#e53e3e';
-                case '#3182ce': return '#3182ce';
-                case '#6b46c1': return '#6b46c1';
-                default: return '#2d3748';
-              }
-            }}
-          />
-          <Background color="#aaa" gap={16} />
-        </ReactFlow>
+      <div 
+        ref={flowContainerRef}
+        style={{ width: '100%', height: '600px' }} 
+        className="rounded-lg overflow-hidden border border-gray-800 relative"
+      >
+        {isLoading ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-75 z-10">
+            <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+            <p className="text-white">Generando diagrama del contrato...</p>
+            <p className="text-gray-400 text-sm mt-2">Esto puede tardar unos momentos</p>
+          </div>
+        ) : null}
+        
+        <ReactFlowProvider>
+          {initialized && (
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              fitView
+              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+            >
+              <Controls />
+              <MiniMap
+                nodeStrokeColor={(n) => '#fff'}
+                nodeColor={(n) => {
+                  switch (n.style?.background) {
+                    case '#5c67e3': return '#5c67e3';
+                    case '#38a169': return '#38a169';
+                    case '#e53e3e': return '#e53e3e';
+                    case '#3182ce': return '#3182ce';
+                    case '#6b46c1': return '#6b46c1';
+                    default: return '#2d3748';
+                  }
+                }}
+              />
+              <Background color="#aaa" gap={16} />
+            </ReactFlow>
+          )}
+        </ReactFlowProvider>
       </div>
 
       <div className="mt-4 text-sm text-gray-400">
         <p>La visualización muestra las relaciones entre variables de estado, funciones y eventos del contrato.</p>
+        {isLoading && (
+          <p className="text-blue-400 mt-2">
+            El diagrama se está generando y se actualizará automáticamente cuando esté listo.
+          </p>
+        )}
       </div>
     </div>
   );

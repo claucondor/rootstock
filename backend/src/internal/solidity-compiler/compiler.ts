@@ -168,7 +168,9 @@ export function compileSolc(source: string, contractName: string): CompilationOu
  */
 export function extractContractName(source: string, defaultName: string = 'TempContract'): string {
   logger.info({ sourceLength: source.length, defaultName }, 'Extracting contract name');
-  const contractNameMatch = source.match(/contract\s+(\w+)/);
+  // Improved regex that handles inheritance with 'is' keyword
+  // This matches 'contract Name' or 'contract Name is SomethingElse'
+  const contractNameMatch = source.match(/contract\s+(\w+)(?:\s+is\s+|[\s{])/);
   const extractedName = contractNameMatch ? contractNameMatch[1] : defaultName;
   logger.info({ extractedName }, 'Contract name extracted');
   return extractedName;
