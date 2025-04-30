@@ -108,12 +108,12 @@ const DiagramView = ({
   const [initialized, setInitialized] = useState(false);
   const flowContainerRef = useRef<HTMLDivElement>(null);
 
-  // Efecto para procesar los datos del análisis cuando cambia el contrato
+  // Effect to process analysis data when the contract changes
   useEffect(() => {
     if (contract?.analysis) {
       try {
         console.log(
-          'Procesando análisis del contrato para diagrama:',
+          'Processing contract analysis for diagram:',
           contract.analysis
         );
         const analysisData = JSON.parse(contract.analysis);
@@ -156,10 +156,10 @@ const DiagramView = ({
             setDiagramExplanation(extractedDiagramData.explanation);
           }
         } else {
-          console.log('No se encontraron datos de diagrama en el análisis');
+          console.log('No diagram data found in analysis');
         }
       } catch (error) {
-        console.error('Error al procesar los datos del diagrama:', error);
+        console.error('Error processing diagram data:', error);
       }
     } else {
       // Resetear cuando no hay contrato o análisis
@@ -168,7 +168,7 @@ const DiagramView = ({
     }
   }, [contract]);
 
-  // Efecto para asegurar que el contenedor está listo antes de renderizar ReactFlow
+  // Effect to ensure the container is ready before rendering ReactFlow
   useEffect(() => {
     if (flowContainerRef.current) {
       const resizeObserver = new ResizeObserver(() => {
@@ -185,7 +185,7 @@ const DiagramView = ({
     }
   }, []);
 
-  // Función para generar los nodos basados en el contrato
+  // Function to generate nodes based on the contract
   const generateNodes = (): Node<NodeData>[] => {
     // Si tenemos datos del diagrama de la API, usarlos
     if (diagramData?.nodes && diagramData.nodes.length > 0) {
@@ -233,7 +233,7 @@ const DiagramView = ({
       return uniqueNodes;
     }
 
-    // En caso contrario, usar el diagrama por defecto
+    // Otherwise, use the default diagram
     if (!contract) return [];
 
     return [
@@ -255,7 +255,7 @@ const DiagramView = ({
         type: 'custom',
         position: { x: 150, y: 300 },
         data: {
-          title: 'Variables de Estado',
+          title: 'State Variables',
           bgColor: 'bg-gray-800',
         },
       },
@@ -266,7 +266,7 @@ const DiagramView = ({
         type: 'custom',
         position: { x: 450, y: 300 },
         data: {
-          title: 'Funciones',
+          title: 'Functions',
           bgColor: 'bg-gray-800',
         },
       },
@@ -277,14 +277,14 @@ const DiagramView = ({
         type: 'custom',
         position: { x: 750, y: 300 },
         data: {
-          title: 'Eventos',
+          title: 'Events',
           bgColor: 'bg-gray-800',
         },
       },
     ];
   };
 
-  // Generar aristas (conexiones)
+  // Generate edges (connections)
   const generateEdges = (): Edge[] => {
     if (diagramData?.edges && diagramData.edges.length > 0) {
       return diagramData.edges.map((edge) => {
@@ -311,7 +311,7 @@ const DiagramView = ({
       });
     }
 
-    // En caso contrario, usar el diagrama por defecto
+    // Otherwise, use the default diagram
     return [
       // Conexiones desde el contrato a las secciones principales
       {
@@ -341,7 +341,7 @@ const DiagramView = ({
     ];
   };
 
-  // Generar el diagrama de flujo
+  // Generate the flowchart
   const generateFlowChart = (): { nodes: Node[]; edges: Edge[] } => {
     // Si tenemos datos del diagrama de flujo de la API, usarlos
     if (diagramData?.flowData) {
@@ -368,7 +368,7 @@ const DiagramView = ({
       };
     }
 
-    // En caso contrario, usar un diagrama de flujo predeterminado simple
+    // Otherwise, use a simple default flowchart
     return {
       nodes: [
         {
@@ -434,12 +434,12 @@ const DiagramView = ({
     };
   };
 
-  // Obtener los nodos activos según la pestaña actual
+  // Get the active nodes according to the current tab
   const getActiveNodes = () => {
     return activeTab === 'flow' ? generateFlowChart().nodes : generateNodes();
   };
 
-  // Obtener las aristas activas según la pestaña actual
+  // Get the active edges according to the current tab
   const getActiveEdges = () => {
     return activeTab === 'flow' ? generateFlowChart().edges : generateEdges();
   };
@@ -459,11 +459,11 @@ const DiagramView = ({
       <div className="flex flex-col items-center justify-center py-20">
         <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-6" />
         <h3 className="text-xl font-bold text-white mb-2">
-          Generando diagrama...
+          Generating diagram...
         </h3>
         <p className="text-gray-400">
-          Analizando el contrato para crear una visualización clara de su
-          estructura.
+          Analyzing the contract to create a clear visualization of its
+          structure.
         </p>
       </div>
     );
@@ -473,7 +473,7 @@ const DiagramView = ({
     return (
       <div className="text-center py-12">
         <p className="text-gray-400">
-          Selecciona un contrato para visualizar su estructura
+          Select a contract to visualize its structure
         </p>
       </div>
     );
@@ -503,7 +503,7 @@ const DiagramView = ({
             ) : (
               <ChevronDown className="h-4 w-4" />
             )}
-            <span className="ml-1">{expanded ? 'Reducir' : 'Expandir'}</span>
+            <span className="ml-1">{expanded ? 'Reduce' : 'Expand'}</span>
           </Button>
           <Button
             variant="outline"
@@ -525,7 +525,7 @@ const DiagramView = ({
             value="structure"
             className="data-[state=active]:bg-gray-700"
           >
-            Estructura
+            Structure
           </TabsTrigger>
           <TabsTrigger value="flow" className="data-[state=active]:bg-gray-700">
             Flujo
@@ -612,19 +612,19 @@ const DiagramView = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-400">
           <div className="flex items-center">
             <div className="w-3 h-3 bg-blue-900 rounded-full mr-2"></div>
-            <span>Contrato Principal</span>
+            <span>Main Contract</span>
           </div>
           <div className="flex items-center">
             <div className="w-3 h-3 bg-green-900 rounded-full mr-2"></div>
-            <span>Funciones de Creación</span>
+            <span>Creation Functions</span>
           </div>
           <div className="flex items-center">
             <div className="w-3 h-3 bg-blue-800 rounded-full mr-2"></div>
-            <span>Funciones de Transferencia</span>
+            <span>Transfer Functions</span>
           </div>
           <div className="flex items-center">
             <div className="w-3 h-3 bg-red-900 rounded-full mr-2"></div>
-            <span>Funciones de Quemado</span>
+            <span>Burn Functions</span>
           </div>
         </div>
       </div>

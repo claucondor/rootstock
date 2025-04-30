@@ -10,8 +10,8 @@ const UseCases = () => {
     {
       id: 'tokens',
       icon: <Coins className="h-8 w-8 text-rootstock-primary" />,
-      title: "Tokens y Finanzas",
-      description: "Crea tokens ERC20 personalizados, sistemas de staking, vesting y más para tus proyectos DeFi.",
+      title: "Tokens & Finance",
+      description: "Create custom ERC20 tokens, staking systems, vesting and more for your DeFi projects.",
       code: `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
@@ -41,8 +41,8 @@ contract DefiToken is ERC20, ERC20Burnable, Pausable, Ownable {
     {
       id: 'nfts',
       icon: <Image className="h-8 w-8 text-rootstock-primary" />,
-      title: "Colecciones NFT",
-      description: "Genera contratos para colecciones NFT con funcionalidades como whitelist, revelado progresivo y royalties.",
+      title: "NFT Collections",
+      description: "Generate contracts for NFT collections with features like whitelist, progressive reveal and royalties.",
       code: `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
@@ -79,8 +79,8 @@ contract ArtCollection is ERC721, ERC721Enumerable, Ownable {
     {
       id: 'dao',
       icon: <Users className="h-8 w-8 text-rootstock-primary" />,
-      title: "Gobernanza y DAOs",
-      description: "Implementa sistemas de gobernanza, votación y gestión de propuestas para organizaciones descentralizadas.",
+      title: "Governance & DAOs",
+      description: "Implement governance systems, voting and proposal management for decentralized organizations.",
       code: `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
@@ -113,7 +113,7 @@ contract DAOGovernance is Governor, GovernorCountingSimple, GovernorVotes, Gover
       id: 'marketplace',
       icon: <ShoppingCart className="h-8 w-8 text-rootstock-primary" />,
       title: "Marketplaces",
-      description: "Crea marketplaces descentralizados para la compra, venta e intercambio de activos digitales.",
+      description: "Create decentralized marketplaces for buying, selling and trading digital assets.",
       code: `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
@@ -185,7 +185,7 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            Aplicaciones
+            Applications
           </motion.span>
           
           <motion.h2 
@@ -195,7 +195,7 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            Casos de Uso
+            Use Cases
           </motion.h2>
           
           <motion.p 
@@ -205,7 +205,7 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            Explora los diferentes tipos de contratos inteligentes que puedes crear con nuestra plataforma.
+            Explore the different types of smart contracts you can create with our platform.
           </motion.p>
         </div>
         
@@ -247,13 +247,13 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
                       href="/contract-generator" 
                       className="inline-flex items-center text-rootstock-primary hover:text-rootstock-primary/80 transition-colors"
                     >
-                      Crear este tipo de contrato
+                      Create this contract type
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </a>
                   </div>
                   
                   <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
-                    <h4 className="text-lg font-semibold text-white mb-3">Características principales:</h4>
+                    <h4 className="text-lg font-semibold text-white mb-3">Key Features:</h4>
                     <ul className="space-y-2 text-gray-300">
                       <li className="flex items-start">
                         <div className="h-5 w-5 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center mr-2 mt-0.5">✓</div>

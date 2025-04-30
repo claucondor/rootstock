@@ -5,30 +5,30 @@ const HowItWorks = () => {
   const steps = [
     {
       icon: <MessageSquare className="h-10 w-10 text-white" />,
-      title: 'Describe tu contrato',
+      title: 'Describe your contract',
       description:
-        'Explica en lenguaje natural qué tipo de contrato necesitas y sus funcionalidades específicas.',
+        'Explain in natural language what type of contract you need and its specific functionalities.',
       color: 'from-blue-600 to-blue-400',
     },
     {
       icon: <Code className="h-10 w-10 text-white" />,
-      title: 'Generación con IA',
+      title: 'AI Generation',
       description:
-        'Nuestra IA analiza tu descripción y genera un contrato inteligente optimizado y seguro.',
+        'Our AI analyzes your description and generates an optimized and secure smart contract.',
       color: 'from-purple-600 to-purple-400',
     },
     {
       icon: <FileText className="h-10 w-10 text-white" />,
-      title: 'Personaliza y refina',
+      title: 'Customize and refine',
       description:
-        'Revisa el contrato generado, solicita cambios específicos o ajusta parámetros según tus necesidades.',
+        'Review the generated contract, request specific changes or adjust parameters according to your needs.',
       color: 'from-green-600 to-green-400',
     },
     {
       icon: <Rocket className="h-10 w-10 text-white" />,
-      title: 'Despliega en Rootstock',
+      title: 'Deploy to Rootstock',
       description:
-        'Compila y despliega tu contrato directamente en la red Rootstock con un solo clic.',
+        'Compile and deploy your contract directly to the Rootstock network with one click.',
       color: 'from-rootstock-primary to-red-400',
     },
   ];
@@ -44,7 +44,7 @@ const HowItWorks = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            Proceso Simple
+            Simple Process
           </motion.span>
 
           <motion.h2
@@ -54,7 +54,7 @@ const HowItWorks = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            Cómo Funciona
+            How It Works
           </motion.h2>
 
           <motion.p
@@ -64,8 +64,8 @@ const HowItWorks = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            Generar contratos inteligentes nunca ha sido tan fácil. Sigue estos
-            simples pasos para crear contratos personalizados en minutos.
+            Generating smart contracts has never been easier. Follow these
+            simple steps to create custom contracts in minutes.
           </motion.p>
         </div>
 
@@ -116,7 +116,7 @@ const HowItWorks = () => {
             href="/contract-generator"
             className="inline-block px-8 py-4 bg-rootstock-primary text-white rounded-lg hover:bg-rootstock-primary/90 transition-colors"
           >
-            Probar Ahora
+            Try Now
           </a>
         </motion.div>
       </div>

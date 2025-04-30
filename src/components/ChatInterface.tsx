@@ -29,19 +29,19 @@ import AnimatedCard from './ui/animated-card';
 
 const EXAMPLE_PROMPTS = [
   {
-    title: 'Token ERC20',
+    title: 'ERC20 Token',
     prompt:
-      "Crea un token ERC20 llamado 'RootstockToken' con símbolo 'RSK' que permita al owner pausar las transferencias",
+      "Create an ERC20 token called 'RootstockToken' with symbol 'RSK' that allows the owner to pause transfers",
   },
   {
     title: 'NFT Collection',
     prompt:
-      'Genera un contrato para una colección NFT con mint limitado a 1000 tokens y whitelist',
+      'Generate a contract for an NFT collection with limited mint of 1000 tokens and whitelist',
   },
   {
-    title: 'Staking DeFi',
+    title: 'DeFi Staking',
     prompt:
-      'Crea un contrato de staking que permita a los usuarios depositar tokens y recibir recompensas',
+      'Create a staking contract that allows users to deposit tokens and receive rewards',
   },
 ];
 
@@ -125,7 +125,7 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
       if (!prompt.trim()) {
         toast({
           title: 'Error',
-          description: 'Por favor ingrese un prompt para generar el contrato.',
+          description: 'Please enter a prompt to generate the contract.',
           variant: 'destructive',
         });
       }
@@ -137,7 +137,7 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
       toast({
         title: 'Error',
         description:
-          'No hay código generado para refinar. Asegúrate de que un contrato esté seleccionado o generado previamente.',
+          'No generated code to refine. Make sure a contract is selected or generated first.',
         variant: 'destructive',
       });
       setLoading(false); // Asegurarse de desactivar el estado de carga si falla la validación
@@ -155,8 +155,8 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
 
     let analysisToastId: string | undefined = undefined;
     const generationToast = toast({
-      title: isRefineMode ? 'Refinando contrato...' : 'Generando contrato...',
-      description: 'Por favor espera, la IA está trabajando.',
+      title: isRefineMode ? 'Refining contract...' : 'Generating contract...',
+      description: 'Please wait, the AI is working.',
       duration: Infinity, // Keep open until dismissed or updated
     });
 
@@ -215,8 +215,8 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
       // Update toast for successful generation/refinement & start analysis info
       generationToast.update({
         id: generationToast.id,
-        title: `Contrato ${isRefineMode ? 'refinado' : 'generado'}`,
-        description: `¡${contractName} listo! Iniciando análisis post-generación...`,
+        title: `Contract ${isRefineMode ? 'refined' : 'generated'}`,
+        description: `${contractName} ready! Starting post-generation analysis...`,
         duration: 5000, // Show for 5 seconds then dismiss
       });
 
@@ -244,8 +244,8 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
       // --- Analysis Phase ---
       if (savedContractId) {
         analysisToastId = toast({
-          title: 'Analizando contrato...',
-          description: 'Generando documentación y diagrama...',
+          title: 'Analyzing contract...',
+          description: 'Generating documentation and diagram...',
           duration: Infinity,
         }).id;
 
@@ -266,8 +266,8 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
         const docResult = results[0];
         const diagramResult = results[1];
 
-        let analysisStatus = 'Análisis Completo';
-        let analysisDescription = `Análisis finalizado para ${contractName}.`;
+        let analysisStatus = 'Analysis Complete';
+        let analysisDescription = `Analysis completed for ${contractName}.`;
         let analysisVariant: 'default' | 'destructive' = 'default';
         let combinedAnalysisUpdate: any = {};
 
@@ -276,9 +276,9 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
           combinedAnalysisUpdate.functionAnalyses =
             docResult.value.functionAnalyses;
         } else {
-          analysisStatus = 'Análisis Parcial';
+          analysisStatus = 'Partial Analysis';
           analysisDescription =
-            'Diagrama generado, pero falló la documentación.';
+            'Diagram generated but documentation failed.';
           analysisVariant = 'destructive';
           if (docResult.status === 'rejected') {
             console.error('Documentation fetch failed:', docResult.reason);
@@ -296,14 +296,14 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
         } else {
           if (analysisStatus === 'Análisis Parcial') {
             // Both failed
-            analysisStatus = 'Error en Análisis';
+            analysisStatus = 'Analysis Error';
             analysisDescription =
-              'No se pudo generar documentación ni diagrama.';
+              'Could not generate documentation or diagram.';
           } else {
             // Only diagram failed (doc succeeded)
-            analysisStatus = 'Análisis Parcial';
+            analysisStatus = 'Partial Analysis';
             analysisDescription =
-              'Documentación generada, pero falló el diagrama.';
+              'Documentation generated but diagram failed.';
             // Update status because doc succeeded but diagram failed
             analysisStatus = 'Análisis Parcial';
           }
@@ -333,9 +333,9 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
               'Error updating contract with combined analysis:',
               updateError
             );
-            analysisStatus = 'Error Guardando Análisis';
+            analysisStatus = 'Error Saving Analysis';
             analysisDescription =
-              'El análisis se completó pero hubo un error al guardarlo.';
+              'Analysis completed but there was an error saving it.';
             analysisVariant = 'destructive';
           }
         }
@@ -353,7 +353,7 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
       } else if (isRefineMode) {
         // Maybe show a different toast for refine mode if needed
         console.log(
-          'Análisis no iniciado para refinamiento por falta de ID de contrato.'
+          'Analysis not started for refinement due to missing contract ID.'
         );
       }
     } catch (error) {
@@ -365,7 +365,7 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
       // Update the generation toast with error
       generationToast.update({
         id: generationToast.id,
-        title: 'Error en Generación/Refinamiento',
+        title: 'Generation/Refinement Error',
         description: errorMessage,
         variant: 'destructive',
         duration: 10000, // Keep error longer
@@ -571,7 +571,7 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
                           onCheckedChange={setIsRefineMode}
                         />
                         <span className="text-sm text-gray-300">
-                          Refinamiento
+                          Refinement
                         </span>
                       </div>
                       <Button
@@ -593,7 +593,7 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
                   className="mb-4"
                 >
                   <h4 className="text-sm font-semibold text-gray-400 mb-2">
-                    Prompts de Ejemplo:
+                    Example Prompts:
                   </h4>
                   <div className="grid grid-cols-1 gap-2">
                     {EXAMPLE_PROMPTS.map((example, index) => (
@@ -626,8 +626,8 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
                       className="w-full bg-gray-800 text-white border border-gray-700 rounded-lg p-3 min-h-[120px] text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                       placeholder={
                         isRefineMode
-                          ? 'Describe los cambios que deseas hacer al contrato...'
-                          : 'Describe el contrato inteligente que deseas generar...'
+                          ? 'Describe the changes you want to make to the contract...'
+                          : 'Describe the smart contract you want to generate...'
                       }
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
@@ -642,7 +642,7 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generando...
+                          Generating...
                         </>
                       ) : isRefineMode ? (
                         'Refinar Contrato'
@@ -661,8 +661,8 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
                   >
                     <div className="mb-2 px-3 py-1 bg-blue-900/30 border border-blue-700/30 rounded-md">
                       <p className="text-xs text-blue-300">
-                        La generación de contratos puede tomar hasta 90 segundos
-                        mientras la IA crea, compila y optimiza tu contrato.
+                        Contract generation may take up to 90 seconds
+                        while the AI creates, compiles and optimizes your contract.
                       </p>
                     </div>
                     <GenerationConsole
@@ -677,7 +677,7 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
                     <div className="p-3">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="text-sm font-semibold text-gray-400">
-                          Explorar Funciones
+                          Explore Functions
                         </h4>
                         <Button
                           variant="ghost"
@@ -729,7 +729,7 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
                 className="bg-gray-800 border-gray-700 shadow-lg"
               >
                 <PanelLeftOpen className="h-4 w-4 mr-2" />
-                Panel de Edición
+                Editor Panel
               </Button>
             </motion.div>
           )}
@@ -743,8 +743,8 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
               >
                 <div className="mb-2 px-3 py-1 bg-blue-900/30 border border-blue-700/30 rounded-md">
                   <p className="text-xs text-blue-300">
-                    La generación de contratos puede tomar hasta 90 segundos
-                    mientras la IA crea, compila y optimiza tu contrato.
+                    Contract generation may take up to 90 seconds
+                    while the AI creates, compiles and optimizes your contract.
                   </p>
                 </div>
                 <GenerationConsole
@@ -762,8 +762,8 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
                       <CardTitle className="text-lg font-semibold flex items-center">
                         <Code className="h-5 w-5 mr-2 text-blue-400" />
                         {contractGenerated
-                          ? 'Contrato Generado'
-                          : 'Editor de Código'}
+                          ? 'Generated Contract'
+                          : 'Code Editor'}
                       </CardTitle>
                       <div>
                         {contractGenerated && (
@@ -784,15 +784,15 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
                     </div>
                     <CardDescription>
                       {contractGenerated
-                        ? 'Vista del código con sintaxis resaltada'
-                        : 'Genera un contrato usando el panel izquierdo'}
+                        ? 'Code view with syntax highlighting'
+                        : 'Generate a contract using the left panel'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
                     {!contractGenerated && !loading ? (
                       <div className="flex items-center justify-center h-[300px] bg-gray-800/50 text-gray-400 text-sm">
-                        No hay contrato generado. Usa el panel izquierdo para
-                        generar uno.
+                        No contract generated. Use the left panel to
+                        generate one.
                       </div>
                     ) : (
                       showCode &&
@@ -854,7 +854,7 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-center">
                       <CardTitle className="text-lg font-semibold">
-                        Visualización
+                        Visualization
                       </CardTitle>
                       <div>
                         {contractGenerated && (
@@ -872,14 +872,14 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
                     </div>
                     <CardDescription>
                       {contractGenerated
-                        ? 'Representación visual del contrato'
-                        : 'Se mostrará cuando generes un contrato'}
+                        ? 'Contract visual representation'
+                        : 'Will appear when you generate a contract'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {!contractGenerated ? (
                       <div className="flex items-center justify-center h-[300px] bg-gray-800/50 text-gray-400 text-sm">
-                        Genera un contrato para ver su visualización
+                        Generate a contract to see its visualization
                       </div>
                     ) : (
                       generatedCode && (
@@ -915,10 +915,10 @@ const ChatInterface = ({ onLoadingStateChange }: ChatInterfaceProps = {}) => {
               checked={isCompactMode}
               onCheckedChange={setIsCompactMode}
             />
-            <span>Modo compacto</span>
+            <span>Compact mode</span>
           </div>
           <div>
-            Ayuda: Usa el panel izquierdo para generar o refinar contratos
+            Help: Use the left panel to generate or refine contracts
           </div>
         </div>
       </motion.div>

@@ -108,7 +108,7 @@ const ContractGenerator = () => {
   console.log('[ContractGenerator] Analysis Result:', { hasDiagram, hasDocumentation });
   console.log('[ContractGenerator] Data being passed to children:', analysisDataForChildren);
 
-  // Función para renderizar el panel de código según la subsección activa
+  // Function to render the code panel based on the active subsection
   const renderCodePanel = () => {
     switch (activeCodeSection) {
       case 'source':
@@ -122,7 +122,7 @@ const ContractGenerator = () => {
     }
   };
 
-  // Función para renderizar el panel derecho según la pestaña activa
+  // Function to render the right panel based on the active tab
   const renderRightPanel = () => {
     const analysisData = analysisResult.data;
     const hasDocumentation = !!analysisData?.functionAnalyses;
@@ -146,7 +146,7 @@ const ContractGenerator = () => {
                 <TabsList className="grid grid-cols-3 mb-4">
                   <TabsTrigger value="source">
                     <Code className="h-4 w-4 mr-2" />
-                    Código Fuente
+                    Source Code
                   </TabsTrigger>
                   <TabsTrigger value="abi">
                     <FileJson className="h-4 w-4 mr-2" />
@@ -185,13 +185,13 @@ const ContractGenerator = () => {
             {!selectedContract ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-500">
                 <AlertCircle className="w-12 h-12 mb-4" />
-                <p>Selecciona un contrato del dropdown superior para ver su diagrama.</p>
+                <p>Select a contract from the dropdown above to view its diagram.</p>
               </div>
             ) : !hasDiagram && !loadingDiagram ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-500">
                 <AlertCircle className="w-12 h-12 mb-4" />
-                <p>El análisis del diagrama no está disponible o no se pudo generar para este contrato.</p>
-                <p className="text-sm mt-1">(La generación del diagrama se inicia después de crear el contrato).</p>
+                <p>Diagram analysis is not available or could not be generated for this contract.</p>
+                <p className="text-sm mt-1">(Diagram generation starts after creating the contract).</p>
               </div>
             ) : (
               <div className="space-y-6">
@@ -235,13 +235,13 @@ const ContractGenerator = () => {
             {!selectedContract ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-500">
                 <AlertCircle className="w-12 h-12 mb-4" />
-                <p>Selecciona un contrato del dropdown superior para ver su documentación.</p>
+                <p>Select a contract from the dropdown above to view its documentation.</p>
               </div>
             ) : !hasDocumentation && !loadingDocumentation ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-500">
                 <AlertCircle className="w-12 h-12 mb-4" />
-                <p>La documentación de funciones no está disponible o no se pudo generar para este contrato.</p>
-                <p className="text-sm mt-1">(La generación de documentación se inicia después de crear el contrato).</p>
+                <p>Function documentation is not available or could not be generated for this contract.</p>
+                <p className="text-sm mt-1">(Documentation generation starts after creating the contract).</p>
               </div>
             ) : (
               <FunctionDocumentation contract={selectedContract} isLoading={loadingDocumentation} analysisData={analysisDataForChildren} />
@@ -293,10 +293,10 @@ const ContractGenerator = () => {
             <Link to="/">
               <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300">
                 <Home className="h-4 w-4 mr-2" />
-                Inicio
+                Home
               </Button>
             </Link>
-            <h1 className="text-xl font-bold text-white">Generador de Contratos</h1>
+            <h1 className="text-xl font-bold text-white">Contract Generator</h1>
           </div>
           
           {/* Center: Contract Selector Dropdown & Delete Button */}
@@ -307,7 +307,7 @@ const ContractGenerator = () => {
               disabled={contracts.length === 0}
             >
               <SelectTrigger className="w-[350px] bg-gray-800 border-gray-700 text-white disabled:opacity-50 disabled:cursor-not-allowed">
-                <SelectValue placeholder="No se han generado contratos" />
+                <SelectValue placeholder="No contracts have been generated" />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 {contracts.map((contract) => (
@@ -336,19 +336,19 @@ const ContractGenerator = () => {
               </AlertDialogTrigger>
               <AlertDialogContent className="bg-gray-900 border-gray-700 text-white">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription className="text-gray-400">
-                    Esta acción no se puede deshacer. Esto eliminará permanentemente el contrato 
-                    "{selectedContract?.name || 'seleccionado'}" de tu historial.
+                    This action cannot be undone. This will permanently delete the contract
+                    "{selectedContract?.name || 'selected'}" from your history.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel className="bg-gray-700 hover:bg-gray-600 border-gray-600">Cancelar</AlertDialogCancel>
-                  <AlertDialogAction 
+                  <AlertDialogCancel className="bg-gray-700 hover:bg-gray-600 border-gray-600">Cancel</AlertDialogCancel>
+                  <AlertDialogAction
                     onClick={handleDeleteSelectedContract}
                     className="bg-red-600 hover:bg-red-700 text-white"
                   >
-                    Eliminar
+                    Delete
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -364,7 +364,7 @@ const ContractGenerator = () => {
                 className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 border-blue-500/50"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver
+                Back
               </Button>
             </Link>
           </div>
@@ -401,7 +401,7 @@ const ContractGenerator = () => {
                 } transition-all duration-300`}>
                   <FileCode className="h-5 w-5" />
                 </div>
-                <span className="mt-1 text-xs font-medium">Código</span>
+                <span className="mt-1 text-xs font-medium">Code</span>
               </motion.div>
               
               <div className="h-1 w-12 bg-gray-700"></div>
@@ -459,7 +459,7 @@ const ContractGenerator = () => {
                     <path d="M16 10a2 2 0 100-4 2 2 0 000 4z" />
                   </svg>
                 </div>
-                <span className="mt-1 text-xs font-medium">Interactuar</span>
+                <span className="mt-1 text-xs font-medium">Interact</span>
               </motion.div>
             </div>
             
@@ -471,31 +471,31 @@ const ContractGenerator = () => {
                     value="code" 
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700"
                   >
-                    Código
+                    Code
                   </TabsTrigger>
                   <TabsTrigger 
                     value="diagram"
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700"
                   >
-                    Diagrama
+                    Diagram
                   </TabsTrigger>
                   <TabsTrigger 
                     value="documentation"
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700"
                   >
-                    Funciones
+                    Functions
                   </TabsTrigger>
                   <TabsTrigger 
                     value="deploy"
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700"
                   >
-                    Desplegar
+                    Deploy
                   </TabsTrigger>
                   <TabsTrigger 
                     value="interaction"
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700"
                   >
-                    Interactuar
+                    Interact
                   </TabsTrigger>
                 </TabsList>
                 

@@ -12,27 +12,27 @@ const Terminal = () => {
       { text: '$ ', delay: 500 },
       { text: 'smart-contract-generator --init', delay: 100, finalDelay: 800 },
       {
-        text: '\n> Inicializando generador de contratos inteligentes...',
+        text: '\n> Initializing smart contract generator...',
         delay: 50,
         finalDelay: 500,
       },
       {
-        text: '\n> Cargando bibliotecas de OpenZeppelin...',
+        text: '\n> Loading OpenZeppelin libraries...',
         delay: 50,
         finalDelay: 500,
       },
       {
-        text: '\n> Conectando a la red de Rootstock...',
+        text: '\n> Connecting to Rootstock network...',
         delay: 50,
         finalDelay: 600,
       },
       {
-        text: '\n> Compilando modelos de tokens ERC20, ERC721...',
+        text: '\n> Compiling ERC20, ERC721 token models...',
         delay: 50,
         finalDelay: 700,
       },
       {
-        text: '\n> Sistema listo. Conecta tu wallet para comenzar.',
+        text: '\n> System ready. Connect your wallet to begin.',
         delay: 50,
         finalDelay: 0,
       },

@@ -1,90 +1,210 @@
-# Prompts para LLM: Solidity Deployer (Frontend y Backend)
+# Prompts for LLM: Solidity Deployer (Frontend and Backend)
 
 ---
 
 ## Prompts Frontend (Vite + React + MetaMask)
 
-### Prompt 1: Estructura del proyecto y dependencias
+### Prompt 1: Project structure and dependencies
 
-Quiero crear una aplicación web con Vite + React que permita a los usuarios escribir contratos inteligentes en Solidity, compilarlos en el navegador y desplegarlos en la red Rootstock (RSK) usando MetaMask.
+I want to create a web application with Vite + React that allows users to write smart contracts in Solidity, compile them in the browser, and deploy them on the Rootstock (RSK) network using MetaMask.
 
-Dame el archivo `package.json` con las dependencias necesarias: React, Vite, ethers.js, solc-js y Monaco Editor para el editor de código.
+Give me the `package.json` file with the necessary dependencies: React, Vite, ethers.js, solc-js, and Monaco Editor for the code editor.
 
-Además, indícame cómo debe ser la estructura de carpetas y archivos principales para empezar el proyecto.
-
----
-
-### Prompt 2: Interfaz y componentes principales
-
-Ahora, crea el archivo `App.jsx` para el frontend.
-
-Debe tener:
-
-- Un editor de código Solidity usando Monaco Editor, con un ejemplo de contrato por defecto.
-- Un selector para elegir entre RSK Testnet y Mainnet.
-- Un botón para desplegar el contrato.
-- Un área para mostrar la dirección y el hash de la transacción del contrato desplegado.
-
-Usa estilos simples y claros. No incluyas aún la lógica de compilación ni deploy, solo la estructura y el estado.
+Also, tell me what the main folder and file structure should be to start the project.
 
 ---
 
-### Prompt 3: Lógica de compilación y deploy
+### Prompt 2: Interface and main components
 
-Agrega la lógica a `App.jsx` para que:
+Now, create the `App.jsx` file for the frontend.
 
-- Compile el código Solidity usando solc-js en el navegador.
-- Use ethers.js para desplegar el contrato a la red seleccionada, conectándose con MetaMask.
-- Cambie la red de MetaMask automáticamente si es necesario (o la agregue si no está).
-- Si el constructor del contrato requiere argumentos, pide al usuario un string por prompt.
-- Muestra errores claros si ocurre algún problema.
+It should have:
 
-El resultado debe mostrar la dirección y el hash de la transacción del contrato desplegado, o el error si ocurre.
+- A Solidity code editor using Monaco Editor, with a default contract example.
+- A selector to choose between RSK Testnet and Mainnet.
+- A button to deploy the contract.
+- An area to display the address and transaction hash of the deployed contract.
+
+Use simple and clear styles. Don't include the compilation or deploy logic yet, just the structure and state.
+
+---
+
+### Prompt 3: Compilation and deploy logic
+
+Add the logic to `App.jsx` so that:
+
+- It compiles the Solidity code using solc-js in the browser.
+- It uses ethers.js to deploy the contract to the selected network, connecting with MetaMask.
+- It changes the MetaMask network automatically if necessary (or adds it if it is not there).
+- If the contract's constructor requires arguments, ask the user for a string via prompt.
+- It displays clear errors if any problem occurs.
+
+The result should show the address and transaction hash of the deployed contract, or the error if it occurs.
+
+---
+
+---
+
+### Prompt 4: Handle network errors and MetaMask connection issues
+
+Enhance the `App.jsx` component to gracefully handle network errors (e.g., when the user is not connected to the internet or the Rootstock testnet is unavailable) and MetaMask connection issues (e.g., when MetaMask is locked or the user rejects the connection request). Display informative error messages to the user in case of such issues.
+
+---
+
+### Prompt 5: Implement contract interaction
+
+Add a new section to `App.jsx` that allows users to interact with the deployed contract. This section should:
+
+- Fetch the contract ABI from the deployed contract.
+- Dynamically generate input fields for each function in the contract ABI.
+- Allow users to enter values for the function arguments.
+- Use `ethers.js` to call the function on the deployed contract.
+- Display the result of the function call to the user.
+
+---
+
+### Prompt 6: Add diagram visualization
+
+Integrate a diagram visualization component into `App.jsx` to display a visual representation of the contract's structure and relationships. Use a library like `reactflow` or `mermaid` to render the diagram. The diagram data should be fetched from the backend API.
 
 ---
 
 ## Prompts Backend (Node.js + TypeScript)
 
-### Prompt 1: Estructura del proyecto y dependencias
+---
 
-Quiero crear un backend en **Node.js + TypeScript** para compilar contratos Solidity y servirlos vía API HTTP. El proyecto debe ser escalable y profesional, siguiendo una estructura similar a grandes monorepos:
+### Prompt 4: Implement contract analysis and diagram generation
 
-- `src/cmd/solidity-compiler-api/` — Punto de entrada del API de compilación, con su propio Dockerfile, index.ts y server.ts
-- `src/internal/solidity-compiler/` — Lógica de compilación de Solidity (usando solc-js), tipos y servicios
-- `src/internal/http/compile/` — Handlers y rutas para el endpoint `/compile`
-- `src/internal/http/healthz/` — Handler y ruta para `/healthz`
-- `src/internal/config/` — Configuración y carga de variables de entorno
-- `src/internal/utils/` — Utilidades como logger
-- Un Dockerfile por cada comando/API en `cmd/`
-- `package.json`, `tsconfig.json`, `README.md`
+Add a new module `src/internal/contract-analyzer/` to analyze Solidity contracts and generate diagram data. This module should:
 
-Dame el `package.json` con dependencias para TypeScript, Express (o Fastify), solc-js, dotenv, y utilidades modernas.
+- Use `solc-js` to parse the Solidity contract and extract information about its structure, functions, state variables, and events.
+- Generate a diagram representation of the contract using a format like `mermaid` or `graphviz`.
+- Expose a function that takes the Solidity contract code as input and returns the diagram data.
 
 ---
 
-### Prompt 2: Esqueleto de archivos y componentes principales
+### Prompt 5: Expose contract analysis API
 
-Crea los archivos base para la estructura anterior:
-
-- `cmd/solidity-compiler-api/index.ts` y `server.ts` para levantar el servidor HTTP
-- `internal/http/compile/compile-handler.ts` y `routes.ts` para el endpoint `/compile`
-- `internal/http/healthz/healthz-handler.ts` y `routes.ts` para `/healthz`
-- `internal/solidity-compiler/solc-service.ts` para la lógica de compilación usando solc-js
-- `internal/config/env.ts` para cargar variables de entorno
-- `internal/utils/logger.ts` para logging básico
-- Un `Dockerfile` en `cmd/solidity-compiler-api/` para correr el servicio en Cloud Run
-
-No incluyas aún la lógica de compilación, solo la estructura, imports y exports necesarios.
+Create a new API endpoint `/analyze` that takes the Solidity contract code as input and returns the diagram data generated by the `src/internal/contract-analyzer/` module.
 
 ---
 
-### Prompt 3: Lógica de compilación y endpoint funcional
+### Prompt 6: Implement robust error handling and logging
 
-Implementa la lógica en `solc-service.ts` para compilar código Solidity usando solc-js (en Node.js, no en el navegador). El handler `/compile` debe:
+Enhance the backend API to include robust error handling and logging. Use a library like `winston` or `pino` for logging. The API should:
 
-- Recibir código Solidity por POST (JSON: `{ source: string }`)
-- Compilar el contrato usando solc-js
-- Devolver el ABI, bytecode y advertencias/errores en JSON
-- Manejar errores de compilación y validación de input
+- Log all incoming requests and outgoing responses.
+- Catch and log any errors that occur during contract compilation, analysis, or API processing.
+- Return informative error messages to the client in case of errors.
 
-Asegúrate de que el endpoint sea seguro, robusto y fácil de extender. El Dockerfile debe estar listo para producción en Cloud Run.
+---
+
+### Prompt 7: Add version conflict resolution
+
+Implement a mechanism to handle version conflicts between `solc-js` and the Solidity code. The API should:
+
+- Detect the Solidity compiler version required by the contract.
+- Use the appropriate version of `solc-js` to compile the contract.
+- Return an error message to the client if the required `solc-js` version is not available.
+---
+
+### Prompt 7: Implement contract events display
+
+Add a section to `App.jsx` to display events emitted by the deployed contract. This section should:
+
+- Use `ethers.js` to listen for events emitted by the contract.
+- Display the event name and arguments in a user-friendly format.
+- Allow users to filter events by name and argument values.
+
+---
+
+### Prompt 8: Add unit tests for frontend components
+
+Create unit tests for the main frontend components (`App.jsx`, editor, deployment, interaction, diagram). Use a testing framework like `Jest` and a testing library like `React Testing Library`. The tests should cover:
+
+- Rendering of the components.
+- Basic functionality (e.g., compiling a contract, deploying a contract, calling a function).
+- Error handling.
+
+---
+
+## Prompts Backend (Node.js + TypeScript)
+
+---
+
+### Prompt 8: Implement contract verification
+
+Add a new module `src/internal/contract-verifier/` to verify the deployed contract on a block explorer like Blockscout. This module should:
+
+- Take the contract address, source code, compiler version, and optimization settings as input.
+- Use the block explorer API to verify the contract.
+- Return the verification status to the client.
+
+---
+
+### Prompt 9: Expose contract verification API
+
+Create a new API endpoint `/verify` that takes the contract address, source code, compiler version, and optimization settings as input and returns the verification status from the `src/internal/contract-verifier/` module.
+
+---
+
+### Prompt 10: Add rate limiting to API endpoints
+
+Implement rate limiting to the API endpoints to prevent abuse. Use a library like `express-rate-limit` or `fastify-rate-limit`. The rate limiting should:
+
+- Limit the number of requests per IP address per time window.
+- Return an error message to the client if the rate limit is exceeded.
+
+---
+
+### Prompt 11: Implement caching of compilation results
+
+Implement caching of compilation results to improve performance. The API should:
+
+- Cache the ABI, bytecode, and other compilation artifacts for each contract.
+- Use the cached results if the same contract is compiled again.
+- Invalidate the cache if the contract code or compiler version changes.
+
+---
+
+### Prompt 12: Improve Mermaid Diagram Generation
+
+Modify the `SEQUENCE_DIAGRAM_GENERATION_PROMPT` and `FUNCTION_SEQUENCE_DIAGRAM_BATCH_PROMPT` to generate more accurate and detailed Mermaid diagrams. The prompts should:
+
+- Emphasize the importance of including all relevant participants in the diagram, including external contracts and users.
+- Provide clear instructions on how to represent different types of interactions, such as function calls, state changes, and event emissions.
+- Encourage the use of notes to provide additional context and explanations.
+- Instruct the LLM to use specific Mermaid syntax for different elements, such as arrows, notes, and loops.
+- Remind the LLM that Mermaid validation is skipped, so the generated code must be correct.
+
+---
+
+### Prompt 13: Enhance Function Analysis
+
+Improve the `FUNCTION_ANALYSIS_PROMPT` to generate more comprehensive and insightful function analyses. The prompt should:
+
+- Instruct the LLM to analyze the function's purpose, inputs, outputs, and potential side effects.
+- Encourage the LLM to identify any potential security vulnerabilities or gas optimization opportunities.
+- Provide examples of how to format the "security" field, including specific types of vulnerabilities to look for.
+- Remind the LLM to extract the exact Solidity source code for the function definition.
+
+---
+
+### Prompt 14: Handle Complex Contracts
+
+Add a new prompt to handle complex contracts with many functions and interactions. The prompt should:
+
+- Instruct the LLM to break down the analysis into smaller, more manageable chunks.
+- Encourage the LLM to identify the key functions and interactions in the contract.
+- Provide guidance on how to represent complex interactions in a Mermaid diagram.
+- Remind the LLM to maintain consistency and accuracy across all analyses.
+
+---
+
+### Prompt 15: Generate Security Considerations
+
+Create a new prompt specifically for generating security considerations for a smart contract. The prompt should:
+
+- Instruct the LLM to identify potential security vulnerabilities in the contract, such as reentrancy, overflow, and underflow.
+- Encourage the LLM to provide specific recommendations for mitigating these vulnerabilities.
+- Provide examples of how to format the security considerations, including the severity level (e.g., "warning", "error") and a detailed description of the vulnerability.

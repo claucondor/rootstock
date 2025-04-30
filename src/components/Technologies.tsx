@@ -6,36 +6,36 @@ const Technologies = () => {
       name: 'Rootstock',
       logo: '/images/rootstock-network.png',
       description:
-        'Red blockchain compatible con EVM que permite contratos inteligentes en Bitcoin',
+        'EVM-compatible blockchain that enables smart contracts on Bitcoin',
     },
     {
       name: 'OpenZeppelin',
       logo: 'https://seeklogo.com/images/O/openzeppelin-logo-2909FE553F-seeklogo.com.png',
-      description: 'Biblioteca de contratos inteligentes seguros y auditados',
+      description: 'Library of secure and audited smart contracts',
     },
     {
       name: 'Solidity',
       logo: 'https://upload.wikimedia.org/wikipedia/commons/9/98/Solidity_logo.svg',
       description:
-        'Lenguaje de programación para contratos inteligentes en Ethereum y redes compatibles',
+        'Programming language for smart contracts on Ethereum and compatible networks',
     },
     {
       name: 'Hardhat',
       logo: 'https://seeklogo.com/images/H/hardhat-logo-888739EBB4-seeklogo.com.png',
       description:
-        'Entorno de desarrollo para compilar, probar y desplegar contratos inteligentes',
+        'Development environment for compiling, testing and deploying smart contracts',
     },
     {
       name: 'React',
       logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg',
       description:
-        'Biblioteca JavaScript para construir interfaces de usuario interactivas',
+        'JavaScript library for building interactive user interfaces',
     },
     {
       name: 'TypeScript',
       logo: 'https://upload.wikimedia.org/wikipedia/commons/4/4c/Typescript_logo_2020.svg',
       description:
-        'Superset de JavaScript con tipado estático para desarrollo más robusto',
+        'JavaScript superset with static typing for more robust development',
     },
   ];
 
@@ -50,7 +50,7 @@ const Technologies = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            Stack Tecnológico
+            Tech Stack
           </motion.span>
 
           <motion.h2
@@ -60,7 +60,7 @@ const Technologies = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            Tecnologías Utilizadas
+            Technologies Used
           </motion.h2>
 
           <motion.p
@@ -70,8 +70,8 @@ const Technologies = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            Nuestra plataforma está construida con las tecnologías más avanzadas
-            y seguras del ecosistema blockchain.
+            Our platform is built with the most advanced and secure
+            technologies in the blockchain ecosystem.
           </motion.p>
         </div>
 
@@ -108,8 +108,8 @@ const Technologies = () => {
         >
           <div className="inline-block px-6 py-3 bg-gray-800 rounded-lg border border-gray-700">
             <p className="text-gray-300">
-              Todas estas tecnologías se combinan para ofrecerte la mejor
-              experiencia en la generación de contratos inteligentes.
+              All these technologies combine to provide you with the best
+              smart contract generation experience.
             </p>
           </div>
         </motion.div>

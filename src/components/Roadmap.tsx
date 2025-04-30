@@ -12,30 +12,30 @@ const Roadmap = () => {
   const milestones = [
     {
       quarter: 'Q2 2025',
-      title: 'Lanzamiento Beta',
+      title: 'Beta Launch',
       description:
-        'Primera versión de la API con soporte para OpenZeppelin y Uniswap V3. Documentación inicial y ejemplos básicos.',
+        'First version of the API with support for OpenZeppelin and Uniswap V3. Initial documentation and basic examples.',
       icon: '🚀',
     },
     {
       quarter: 'Q3 2025',
-      title: 'Mejoras de Seguridad',
+      title: 'Security Improvements',
       description:
-        'Integración de análisis de seguridad automatizado para los contratos generados. Auditorías de código y optimización de gas.',
+        'Integration of automated security analysis for generated contracts. Code audits and gas optimization.',
       icon: '🔒',
     },
     {
       quarter: 'Q4 2025',
-      title: 'Ampliación de Frameworks',
+      title: 'Framework Expansion',
       description:
-        'Añadir soporte para nuevos frameworks y estándares. Compatibilidad con Solidity 0.8.30+.',
+        'Add support for new frameworks and standards. Solidity 0.8.30+ compatibility.',
       icon: '🔧',
     },
     {
       quarter: 'Q1 2026',
-      title: 'Herramientas Avanzadas',
+      title: 'Advanced Tools',
       description:
-        'Visualizador de contratos completo, herramientas de prueba automatizadas y despliegue directo a testnet y mainnet.',
+        'Complete contract visualizer, automated testing tools, and direct deployment to testnet and mainnet.',
       icon: '⚙️',
     },
   ];
@@ -81,7 +81,7 @@ const Roadmap = () => {
   return (
     <div className="relative max-w-6xl mx-auto px-4 py-12">
       <h2 className="text-3xl font-bold text-center text-white mb-12">
-        Nuestro Roadmap
+        Our Roadmap
       </h2>
 
       {/* Línea de progreso */}
@@ -163,10 +163,10 @@ const Roadmap = () => {
                         ></div>
                         <span className="text-sm text-gray-400">
                           {index < activeSlide
-                            ? 'Completado'
+                            ? 'Completed'
                             : index === activeSlide
-                              ? 'En progreso'
-                              : 'Pendiente'}
+                              ? 'In progress'
+                              : 'Pending'}
                         </span>
                       </div>
                     </motion.div>

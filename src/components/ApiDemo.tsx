@@ -25,7 +25,7 @@ const ApiDemo = () => {
     if (prompt.trim() === '') {
       toast({
         title: 'Error',
-        description: 'Por favor ingrese un prompt para generar el contrato',
+        description: 'Please enter a prompt to generate the contract',
         variant: 'destructive',
       });
       return;
@@ -75,8 +75,8 @@ contract RootstockToken is ERC20, ERC20Burnable, Pausable, Ownable {
       setLoading(false);
 
       toast({
-        title: 'Contrato generado',
-        description: 'El contrato se ha generado correctamente',
+        title: 'Contract generated',
+        description: 'The contract has been generated successfully',
       });
     }, 2000);
   };
@@ -87,10 +87,10 @@ contract RootstockToken is ERC20, ERC20Burnable, Pausable, Ownable {
 
   return (
     <div className="p-6">
-      <h3 className="text-xl font-bold mb-6 text-white">Prueba nuestra API</h3>
+      <h3 className="text-xl font-bold mb-6 text-white">Try our API</h3>
 
       <div className="mb-6">
-        <h4 className="text-sm text-gray-400 mb-2">Ejemplos de prompts:</h4>
+        <h4 className="text-sm text-gray-400 mb-2">Prompt examples:</h4>
         <div className="flex flex-wrap gap-2">
           {examplePrompts.map((example, index) => (
             <button
@@ -108,7 +108,7 @@ contract RootstockToken is ERC20, ERC20Burnable, Pausable, Ownable {
         <div className="mb-4">
           <textarea
             className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg p-4 min-h-[120px]"
-            placeholder="Describe el contrato inteligente que deseas generar..."
+            placeholder="Describe the smart contract you want to generate..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             disabled={loading}
@@ -123,10 +123,10 @@ contract RootstockToken is ERC20, ERC20Burnable, Pausable, Ownable {
           {loading ? (
             <>
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Generando contrato...
+              Generating contract...
             </>
           ) : (
-            'Generar contrato'
+            'Generate contract'
           )}
         </button>
       </form>
@@ -137,7 +137,7 @@ contract RootstockToken is ERC20, ERC20Burnable, Pausable, Ownable {
           animate={{ opacity: 1, y: 0 }}
           className="mt-6"
         >
-          <h4 className="text-white font-semibold mb-2">Contrato generado:</h4>
+          <h4 className="text-white font-semibold mb-2">Generated contract:</h4>
           <div className="bg-gray-900 rounded-lg p-4 overflow-auto max-h-[400px]">
             <pre className="text-gray-300 font-mono text-sm whitespace-pre-wrap">
               {result.source}
@@ -146,8 +146,8 @@ contract RootstockToken is ERC20, ERC20Burnable, Pausable, Ownable {
 
           <div className="mt-4 text-sm text-gray-400">
             <p>
-              En una implementación real, la respuesta también incluiría el ABI
-              del contrato, bytecode compilado y análisis adicional.
+              In a real implementation, the response would also include the contract ABI,
+              compiled bytecode and additional analysis.
             </p>
           </div>
         </motion.div>

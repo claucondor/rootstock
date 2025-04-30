@@ -35,9 +35,9 @@ const Hero = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              Contratos Inteligentes{' '}
+              Smart Contracts{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-rootstock-primary to-purple-600">
-                en Segundos
+                in Seconds
               </span>
             </motion.h1>
 
@@ -90,14 +90,14 @@ const Hero = () => {
                 to="/contract-generator"
                 className="px-8 py-4 bg-rootstock-primary text-white rounded-lg hover:bg-rootstock-primary/90 transition-colors flex items-center justify-center"
               >
-                Comenzar Ahora
+                Get Started
               </Link>
 
               <a
                 href="#how-it-works"
                 className="px-8 py-4 bg-transparent border border-gray-600 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center"
               >
-                Cómo Funciona
+                How It Works
                 <ArrowDown className="ml-2 h-5 w-5" />
               </a>
             </motion.div>
@@ -145,7 +145,7 @@ contract RootstockToken is ERC20, Ownable {
               </div>
 
               <div className="absolute -bottom-4 -right-4 bg-rootstock-primary text-white text-sm px-4 py-2 rounded-lg shadow-lg">
-                Generado en segundos con IA
+                Generated in seconds with AI
               </div>
             </motion.div>
           </div>
