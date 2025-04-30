@@ -52,8 +52,22 @@ export interface ContractAnalysisOutput {
  * Used internally before validation and correction.
  */
 export interface RawDiagramOutput {
-  generalDiagram: DiagramItem;
+  generalDiagram?: DiagramItem | null;
+  functionDiagrams?: Record<string, DiagramItem | null>;
+}
+
+/**
+ * Type for the output of a batch request for function diagrams.
+ * Maps function names to their DiagramItem.
+ */
+export type FunctionDiagramBatchOutput = Record<string, DiagramItem | null>;
+
+/**
+ * Final structured result containing validated diagrams.
+ */
+export interface AnalysisResult {
+  generalDiagram: DiagramItem | null; // Null if validation/correction failed
   functionDiagrams: {
-    [functionName: string]: DiagramItem;
+    [functionName: string]: DiagramItem; // Only includes validated diagrams
   };
 } 

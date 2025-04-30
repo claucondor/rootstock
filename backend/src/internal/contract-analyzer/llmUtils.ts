@@ -20,6 +20,8 @@ export function extractAndParseJson<T>(
     logger.warn(`Cannot parse empty or null response for ${context}.`);
     return null;
   }
+  // Keep the original raw response for better error logging if needed
+  const rawResponse = response;
   const trimmedResponse = response.trim();
 
   // 1. Try direct parsing first (ideal case)
@@ -30,33 +32,44 @@ export function extractAndParseJson<T>(
     logger.warn(
       {
         error: directError instanceof Error ? directError.message : String(directError),
+        // Log a larger snippet on failure
+        responseSnippet: trimmedResponse.substring(0, 200),
       },
       `Direct JSON parsing failed for ${context}, attempting markdown extraction.`
     );
   }
 
   // 2. Try extracting from ```json ... ``` or ``` ... ```
-  // Combined regex to catch both ```json\n<content>\n``` and ```\n<content>\n```
+  // Updated regex to be more flexible with whitespace around/within the block
   logger.debug(`Attempting markdown JSON extraction for ${context}...`);
-  const jsonMatch = trimmedResponse.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
+  const jsonMatch = trimmedResponse.match(/\s*```(?:json)?\s*\n?([\s\S]*?)\n?\s*```\s*/);
   if (jsonMatch && jsonMatch[1]) {
     try {
+      // Ensure the captured group content is trimmed properly before parsing
       const extracted = jsonMatch[1].trim();
       logger.debug(`Found markdown block for ${context}, attempting parse...`);
+      if (extracted) { // Make sure extracted content is not empty after trim
       return JSON.parse(extracted) as T;
+      } else {
+         logger.warn(`Markdown block extracted but was empty after trimming for ${context}.`);
+      }
     } catch (markdownError) {
       logger.warn(
         {
           error: markdownError instanceof Error ? markdownError.message : String(markdownError),
-          extractedSnippet: jsonMatch[1].substring(0, 100),
+          // Log the exact extracted snippet that failed to parse
+          extractedContent: jsonMatch[1], // Log the raw extracted content before trim
+          fullResponseSnippet: trimmedResponse.substring(0, 200),
         },
         `Parsing failed for ${context} after extracting from markdown \`\`\` block.`
       );
     }
+  } else {
+     logger.debug(`No markdown block found for ${context}.`);
   }
 
   // 3. Fallback: Try to find the first '{' and last '}' assuming it's the main object
-  logger.debug(`Attempting brace-based JSON extraction for ${context}...`);
+  logger.warn(`Attempting potentially unreliable brace-based JSON extraction as fallback for ${context}...`);
   const firstBrace = trimmedResponse.indexOf('{');
   const lastBrace = trimmedResponse.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace > firstBrace) {
@@ -70,7 +83,8 @@ export function extractAndParseJson<T>(
       logger.warn(
         {
           error: braceError instanceof Error ? braceError.message : String(braceError),
-          braceSnippet: trimmedResponse.substring(firstBrace, Math.min(firstBrace + 100, lastBrace + 1)),
+          braceSnippet: trimmedResponse.substring(firstBrace, Math.min(firstBrace + 150, lastBrace + 1)),
+          fullResponseSnippet: trimmedResponse.substring(0, 200),
         },
         `Parsing failed for ${context} after extracting content between first/last braces.`
       );
@@ -79,7 +93,7 @@ export function extractAndParseJson<T>(
 
   // If all attempts fail
   logger.error(
-    `All attempts to parse JSON from ${context} failed. Raw response: ${trimmedResponse.substring(0, 200)}...`
+    `All attempts to parse JSON from ${context} failed. Raw response snippet: ${rawResponse.substring(0, 300)}...` // Use rawResponse for full context
   );
   return null;
 }

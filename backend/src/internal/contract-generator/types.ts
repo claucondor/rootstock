@@ -47,3 +47,9 @@ export interface GeneratedContract {
    */
   attempts?: number;
 }
+
+// Define the structure for the find/replace JSON response
+export interface FindReplacePair {
+  find: string;
+  replace: string;
+}

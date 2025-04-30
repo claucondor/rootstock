@@ -7,22 +7,18 @@ import {
   COMBINED_REFINE_JSON_CONTEXT,
   JSON_RECOVERY_CONTEXT,
 } from './templates';
-import { GeneratedContract } from './types';
+import { GeneratedContract, FindReplacePair } from './types';
 import { CompilationError, CompilationOutput } from '../solidity-compiler/types';
 import pino from 'pino';
 import { extractContractName } from '../solidity-compiler/compiler';
+import { callLlm, extractAndParseJson } from '../contract-analyzer/llmUtils';
+import { ModelMessage } from '../openrouter/types';
 
 const logger = pino();
 
 // Helper function to escape regex special characters in the 'find' string
 function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&'); // $& means the whole matched string
-}
-
-// Define the structure for the find/replace JSON response
-interface FindReplacePair {
-  find: string;
-  replace: string;
 }
 
 /**
@@ -81,7 +77,16 @@ export class ContractGenerator {
             'Initial code generated'
           );
 
-          // Extract contract name from the clean source code
+          // --- INICIO PARCHE: Corregir error común de override(..., Ownable) --- 
+          const originalLength = sourceCode.length;
+          // Busca 'override(' seguido de cualquier cosa, luego ', Ownable' u 'Ownable,' (con espacios opcionales), luego cualquier cosa hasta ')'
+          sourceCode = sourceCode.replace(/override\s*\(([^)]*?)(?:,\s*Ownable|Ownable\s*,)([^)]*?)\)/g, 'override($1$2)');
+          if (sourceCode.length !== originalLength) {
+            logger.warn('Applied automatic patch to remove Ownable from supportsInterface override.');
+          }
+          // --- FIN PARCHE --- 
+
+          // Extract contract name from the *potentially patched* source code
           contractName = extractContractName(sourceCode);
           logger.info(
             { contractName },
@@ -554,143 +559,126 @@ Generate the necessary modifications ONLY as a JSON array of { "find": "...", "r
   }
 
   /**
-   * Sends the *flattened* contract with errors to the LLM for correction using find/replace.
-   * @param flattenedSourceCode Flattened source code of the contract with errors
-   * @param errors Compilation errors
-   * @param originalPrompt Original prompt to maintain context
-   * @returns Corrected flattened source code after applying replacements
-   * @throws Error if LLM response is not valid JSON or replacements fail
+   * Attempts to fix compilation errors using flattened code by asking the LLM
+   * for find/replace JSON patches.
+   * Uses robust LLM calling and JSON parsing.
+   *
+   * @param flattenedSourceCode The flattened Solidity code.
+   * @param errors The list of compilation errors.
+   * @param originalPrompt The original user prompt for context.
+   * @returns The modified flattened source code after applying corrections.
+   * @throws Error if LLM call or JSON parsing fails definitively.
    */
   private async fixContractErrorsFlattened(
     flattenedSourceCode: string,
     errors: CompilationError[],
     originalPrompt: string
   ): Promise<string> {
-    const formattedErrors = errors
-      .map(
-        (err) =>
-          `- ${err.severity.toUpperCase()}: ${err.formattedMessage || err.message}`
-      )
+    logger.info(
+      'Calling LLM for flattened code correction (find/replace) using robust utils'
+    );
+    const errorMessages = errors
+      .map((e) => `- ${e.severity}: ${e.message}`)
       .join('\n');
 
-    // Create the user prompt for the flattened correction method
-    const fixPrompt = `The following flattened Solidity code produced compilation errors:
+    const messages: ModelMessage[] = [
+      {
+        role: 'system',
+        content: FLATTENED_CORRECTION_CONTEXT, // Uses the stricter prompt
+      },
+      {
+        role: 'user',
+        content: `Original Prompt:\n${originalPrompt}\n\nFlattened Code:\n\`\`\`solidity\n${flattenedSourceCode}\n\`\`\`\n\nCompilation Errors:\n${errorMessages}\n\nPlease provide the find/replace JSON array to fix these errors. Remember to output ONLY the JSON array.`, // Reiterate JSON only rule
+      },
+    ];
 
-\`\`\`solidity
-${flattenedSourceCode}
-\`\`\`
+    let findReplaceJson: FindReplacePair[] | null = null;
+    let llmResponse: string | null = null;
 
-Compilation Errors:
+    // Initial attempt - Pass the client instance
+    llmResponse = await callLlm(
+      this.openRouter.client, // *** FIX: Pass client, not service ***
+      messages,
+      'flattened correction find/replace'
+    );
 
-${formattedErrors}
-
-Please provide the necessary corrections in the specified JSON format (array of { \"find\": \"...\", \"replace\": \"...\" }) to fix these errors.
-Remember the original request was: "${originalPrompt}".
-Adhere strictly to the system prompt's JSON output format and rules.`;
-
-    logger.info('Calling LLM for flattened code correction (find/replace)');
-    const response = await this.openRouter.callModel([
-      { role: 'system', content: FLATTENED_CORRECTION_CONTEXT }, // Use the new context
-      { role: 'user', content: fixPrompt },
-    ]);
-
-    let correctedCode = flattenedSourceCode;
-    try {
-      // Attempt to parse the JSON response
-      const replacements: FindReplacePair[] = JSON.parse(response);
-
-      if (!Array.isArray(replacements)) {
-        throw new Error('LLM response is not a JSON array.');
-      }
-
-      logger.info(
-        { count: replacements.length },
-        'Received find/replace instructions'
+    if (llmResponse) {
+      findReplaceJson = extractAndParseJson<FindReplacePair[]>(
+        llmResponse,
+        'flattened correction response'
       );
-
-      // Apply replacements sequentially
-      for (const { find, replace } of replacements) {
-        if (typeof find !== 'string' || typeof replace !== 'string') {
-          logger.warn(
-            { pair: { find, replace } },
-            'Skipping invalid replacement pair (non-string find/replace)'
-          );
-          continue;
-        }
-        if (!correctedCode.includes(find)) {
-          logger.warn(
-            { find },
-            'Skipping replacement: \`find\` string not found in current code. Code might have changed in previous replacements.'
-          );
-          // Consider more robust patching if this becomes an issue
-          continue;
-        }
-        // Use RegExp replace for broader compatibility instead of replaceAll
-        correctedCode = correctedCode.replace(new RegExp(escapeRegExp(find), 'g'), replace);
-      }
-
-      logger.info('Applied find/replace corrections to flattened code');
-      return correctedCode;
-    } catch (parseError) {
-      logger.error(
-        {
-          error: parseError instanceof Error ? parseError.message : String(parseError),
-          llmResponse: response, // Log the initial invalid response
-        },
-        'Failed to parse flattened correction JSON from LLM. Attempting recovery...'
-      );
-
-      // === JSON RECOVERY ATTEMPT ===
-      try {
-         const recoveryPrompt = `Original Prompt that led to invalid JSON:\n---\n${fixPrompt}\n---\n\nInvalid Response (malformed JSON):\n---\n${response}\n---\n\nPlease provide the corrected JSON array.`;
-
-         logger.info('Calling LLM for JSON format recovery (flattened correction)');
-         const recoveryResponse = await this.openRouter.callModel([
-            { role: 'system', content: JSON_RECOVERY_CONTEXT },
-            { role: 'user', content: recoveryPrompt },
-         ]);
-
-         // Try parsing the recovery response
-         const recoveredReplacements: FindReplacePair[] = JSON.parse(recoveryResponse);
-         if (!Array.isArray(recoveredReplacements)) {
-            throw new Error('LLM recovery response for flattened correction is also not a JSON array.');
-         }
-         logger.info(
-            { count: recoveredReplacements.length },
-            'Successfully recovered flattened correction JSON'
-         );
-
-         // Apply recovered replacements (apply to the original flattened code passed to this function)
-         let currentCode = flattenedSourceCode;
-         for (const { find, replace } of recoveredReplacements) {
-            if (typeof find !== 'string' || typeof replace !== 'string') {
-               logger.warn({ pair: { find, replace } }, 'Skipping invalid recovered correction pair');
-               continue;
-            }
-            if (!currentCode.includes(find)) {
-               logger.warn({ find }, 'Skipping recovered correction: `find` string not found.');
-               continue;
-            }
-            currentCode = currentCode.replace(new RegExp(escapeRegExp(find), 'g'), replace);
-         }
-         logger.info('Applied recovered find/replace corrections to flattened code');
-         return currentCode; // Return the successfully recovered and patched code
-
-      } catch (recoveryError) {
-         // If recovery also fails, then throw the final error
-         logger.error(
-           {
-              recoveryError: recoveryError instanceof Error ? recoveryError.message : String(recoveryError),
-              originalError: parseError instanceof Error ? parseError.message : String(parseError),
-           },
-           'JSON recovery attempt failed for flattened correction.'
-         );
-         throw new Error(
-            `Failed to process LLM flattened correction response after recovery: ${recoveryError instanceof Error ? recoveryError.message : String(recoveryError)}`
-         );
-      }
-      // === END JSON RECOVERY ATTEMPT ===
     }
+
+    // If parsing failed, attempt recovery ONCE
+    if (!findReplaceJson && llmResponse) {
+      logger.warn(
+        {
+          error: 'Initial parsing failed for flattened correction JSON.',
+          llmResponseSnippet: llmResponse.substring(0, 200),
+        },
+        'Attempting JSON recovery for flattened correction.'
+      );
+      const recoveryMessages: ModelMessage[] = [
+        {
+          role: 'system',
+          content: JSON_RECOVERY_CONTEXT, // Use stricter recovery prompt
+        },
+        {
+          role: 'user',
+          content: `The previous prompt asked for a find/replace JSON array to fix Solidity errors based on the flattened code and error list (details omitted for brevity here, assume you have context).\n\nYour invalid response was:\n\`\`\`\n${llmResponse}\n\`\`\`\n\nPlease provide ONLY the valid JSON array [ { \"find\": \"...\", \"replace\": \"...\" } ] based on your intended correction.`, // Reiterate JSON only rule
+        },
+      ];
+
+      // Recovery attempt - Pass the client instance
+      const recoveryResponse = await callLlm(
+        this.openRouter.client, // *** FIX: Pass client, not service ***
+        recoveryMessages,
+        'flattened correction JSON recovery'
+      );
+
+      if (recoveryResponse) {
+        findReplaceJson = extractAndParseJson<FindReplacePair[]>(
+          recoveryResponse,
+          'flattened correction recovery response'
+        );
+      }
+
+      if (!findReplaceJson) {
+          logger.error(
+              { originalResponseSnippet: llmResponse.substring(0, 200), recoveryResponseSnippet: recoveryResponse?.substring(0, 200) },
+              'JSON recovery attempt failed for flattened correction.'
+          );
+          // Decide how to proceed: throw, return original code, or empty array behavior?
+          // Throwing for now, as we couldn't get instructions to fix.
+          throw new Error('Failed to parse LLM flattened correction response even after recovery.');
+      }
+    }
+
+    if (!findReplaceJson) {
+        // This happens if the initial callLlm failed OR the recovery callLlm failed
+        logger.error('Could not obtain valid find/replace JSON from LLM for flattened correction.');
+        throw new Error('Could not obtain valid find/replace JSON from LLM for flattened correction.');
+    }
+
+    logger.info(
+      { count: findReplaceJson.length },
+      'Successfully parsed find/replace JSON for flattened correction.'
+    );
+
+    // Apply the replacements
+    let correctedCode = flattenedSourceCode;
+    for (const pair of findReplaceJson) {
+      // Basic validation of the pair
+      if (typeof pair.find !== 'string' || typeof pair.replace !== 'string') {
+        logger.warn({ pair }, 'Skipping invalid find/replace pair.');
+        continue;
+      }
+      // Escape the 'find' string for use in RegExp
+      const findRegex = new RegExp(escapeRegExp(pair.find), 'g');
+      correctedCode = correctedCode.replace(findRegex, pair.replace);
+    }
+
+    return correctedCode;
   }
 
   /**

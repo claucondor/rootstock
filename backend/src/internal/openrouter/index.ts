@@ -8,7 +8,8 @@ export * from './types';
  * Servicio para interactuar con la API de OpenRouter
  */
 export class OpenRouterService {
-  private readonly client: OpenRouterClient;
+  // Make client public to allow access from other services needing the client directly
+  public readonly client: OpenRouterClient;
 
   /**
    * Constructor del servicio OpenRouter
