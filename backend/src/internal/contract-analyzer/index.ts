@@ -15,7 +15,7 @@ import {
   RawDiagramOutput,
   FunctionDiagramBatchOutput,
 } from './types';
-import { extractAndParseJson, callLlm } from './llmUtils';
+import { extractAndParseJson, callLlm, parseLlmJsonResponse } from './llmUtils';
 
 const logger = pino();
 
@@ -180,7 +180,7 @@ export class ContractAnalyzerService {
           continue; // Skip to next batch or handle error more gracefully
         }
 
-        const parsedJson = extractAndParseJson<FunctionAnalyses>(
+        const parsedJson = parseLlmJsonResponse<FunctionAnalyses>(
           response,
           `function analysis batch ${batchNumber} response`
         );
@@ -245,7 +245,7 @@ export class ContractAnalyzerService {
       }
 
       // Expecting { generalDiagram: DiagramItem }
-      const parsedJson = extractAndParseJson<{ generalDiagram: DiagramItem }>(
+      const parsedJson = parseLlmJsonResponse<{ generalDiagram: DiagramItem }>(
         response,
         'general diagram generation response'
       );
@@ -299,7 +299,7 @@ export class ContractAnalyzerService {
       }
 
       // Expecting { funcName1: DiagramItem, funcName2: DiagramItem, ... }
-      const parsedJson = extractAndParseJson<FunctionDiagramBatchOutput>(
+      const parsedJson = parseLlmJsonResponse<FunctionDiagramBatchOutput>(
         response,
         `function diagrams batch ${batchNumber} response`
       );

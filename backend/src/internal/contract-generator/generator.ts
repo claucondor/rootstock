@@ -77,14 +77,22 @@ export class ContractGenerator {
             'Initial code generated'
           );
 
-          // --- INICIO PARCHE: Corregir error común de override(..., Ownable) --- 
+          // --- INICIO PATCHE: Corregir errores comunes --- 
           const originalLength = sourceCode.length;
-          // Busca 'override(' seguido de cualquier cosa, luego ', Ownable' u 'Ownable,' (con espacios opcionales), luego cualquier cosa hasta ')'
+          
+          // 1. Corregir error común de override(..., Ownable)
           sourceCode = sourceCode.replace(/override\s*\(([^)]*?)(?:,\s*Ownable|Ownable\s*,)([^)]*?)\)/g, 'override($1$2)');
+          
+          // 2. Corregir error común de Ownable(msg.sender) en el constructor
+          sourceCode = sourceCode.replace(/Ownable\s*\(\s*msg\.sender\s*\)/g, 'Ownable()');
+          
+          // 3. Corregir Ownable sin paréntesis (debería ser Ownable())
+          sourceCode = sourceCode.replace(/(\b(?:is|,)\s+[^{,]+?)(\bOwnable\b)([^(,]*?[,)])/g, '$1$2()$3');
+          
           if (sourceCode.length !== originalLength) {
-            logger.warn('Applied automatic patch to remove Ownable from supportsInterface override.');
+            logger.warn('Applied automatic patch to fix common inheritance/constructor issues.');
           }
-          // --- FIN PARCHE --- 
+          // --- FIN PATCHE --- 
 
           // Extract contract name from the *potentially patched* source code
           contractName = extractContractName(sourceCode);

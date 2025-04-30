@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import MermaidDiagram from '@/components/MermaidDiagram';
 
 const ContractGenerator = () => {
   const [activeTab, setActiveTab] = useState('code');
@@ -75,11 +76,15 @@ const ContractGenerator = () => {
 
   // Helper function to parse analysis data
   const parseAnalysisData = (analysisString: string | undefined | null) => {
-    if (!analysisString) return { hasDiagram: false, hasDocumentation: false, data: null };
     try {
       const data = JSON.parse(analysisString);
-      // Check for the specific keys we expect
-      const hasDiagram = !!(data && data.diagramData && Array.isArray(data.diagramData.nodes) && Array.isArray(data.diagramData.edges));
+      // Updated check: Look for generalDiagram.mermaidCode or functionDiagrams
+      const hasDiagram = !!(
+        data && 
+        data.diagramData && 
+        (data.diagramData.generalDiagram?.mermaidCode || // Check for the new structure
+         (data.diagramData.functionDiagrams && typeof data.diagramData.functionDiagrams === 'object'))
+      );
       const hasDocumentation = !!(data && data.functionAnalyses && typeof data.functionAnalyses === 'object' && Object.keys(data.functionAnalyses).length > 0 && !data.functionAnalyses.error);
       return { hasDiagram, hasDocumentation, data };
     } catch (error) {
@@ -121,7 +126,6 @@ const ContractGenerator = () => {
   const renderRightPanel = () => {
     const analysisData = analysisResult.data;
     const hasDocumentation = !!analysisData?.functionAnalyses;
-    const hasDiagram = !!analysisData?.diagramData?.nodes && analysisData.diagramData.nodes.length > 0;
 
     switch (activeTab) {
       case 'code':
@@ -190,7 +194,32 @@ const ContractGenerator = () => {
                 <p className="text-sm mt-1">(La generación del diagrama se inicia después de crear el contrato).</p>
               </div>
             ) : (
-              <DiagramView contract={selectedContract} isLoading={loadingDiagram} analysisData={analysisDataForChildren} />
+              <div className="space-y-6">
+                {analysisDataForChildren?.diagramData?.generalDiagram && (
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-4">Diagrama General</h3>
+                    <p className="text-gray-300 mb-4">{analysisDataForChildren.diagramData.generalDiagram.explanation}</p>
+                    <div className="bg-white rounded-lg p-4">
+                      <MermaidDiagram chart={analysisDataForChildren.diagramData.generalDiagram.mermaidCode} />
+                    </div>
+                  </div>
+                )}
+                
+                {analysisDataForChildren?.diagramData?.functionDiagrams && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Diagramas de Funciones</h3>
+                    {Object.entries(analysisDataForChildren.diagramData.functionDiagrams).map(([funcName, diagram]: [string, any]) => (
+                      <div key={funcName} className="bg-gray-800 rounded-lg p-4">
+                        <h4 className="text-md font-medium mb-2">{funcName}</h4>
+                        <p className="text-gray-300 mb-4">{diagram.explanation}</p>
+                        <div className="bg-white rounded-lg p-4">
+                          <MermaidDiagram chart={diagram.mermaidCode} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </motion.div>
         );

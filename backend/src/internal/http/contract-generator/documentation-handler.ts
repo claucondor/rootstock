@@ -48,7 +48,7 @@ export async function generateDocumentationHandler(
       );
       try {
         const contractAnalyzer = new ContractAnalyzerService();
-        functionAnalyses = await contractAnalyzer.generateFunctionAnalyses(
+        functionAnalyses = await contractAnalyzer.generateFunctionAnalysesInBatches(
           source,
           abi
         );
